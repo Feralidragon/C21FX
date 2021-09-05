@@ -1,6 +1,7 @@
 
 class C21FX_CanvasRender extends Mutator nousercreate;
 
+//Simulated events
 simulated event tick(float delta)
 {
 	if (!bHUDMutator && Level.NetMode != NM_DedicatedServer) {
@@ -24,6 +25,8 @@ simulated event postRender(Canvas canvas)
 		manager.render(canvas);
 	}
 }
+
+
 
 defaultproperties
 {

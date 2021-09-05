@@ -1,8 +1,15 @@
 
 class C21FX_Controller extends C21FX_Editor abstract;
 
-simulated event render(Canvas canvas);
+//Implementable events
+event initialize();
 
+
+//Implementable simulated events
+simulated event render(Canvas canvas, float delta, float opacity);
+
+
+//Events
 event postBeginPlay()
 {
 	//local
@@ -19,7 +26,12 @@ event postBeginPlay()
 	if (!hasManager) {
 		spawn(class'C21FX_Manager');
 	}
+	
+	//initialize
+	initialize();
 }
+
+
 
 defaultproperties
 {
