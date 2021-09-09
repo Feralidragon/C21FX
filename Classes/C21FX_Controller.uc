@@ -6,7 +6,7 @@ event initialize();
 
 
 //Implementable simulated events
-simulated event render(Canvas canvas, float delta, float opacity);
+simulated event render(RenderFrame frame);
 
 
 //Events

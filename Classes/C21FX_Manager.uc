@@ -23,6 +23,7 @@ simulated event tick(float delta)
 final simulated function render(Canvas canvas)
 {
 	//local
+	local RenderFrame frame;
 	local C21FX_Controller controller;
 	
 	//delta time
@@ -30,15 +31,20 @@ final simulated function render(Canvas canvas)
 		return;
 	}
 	
+	//frame
+	frame.Canvas = canvas;
+	frame.Delta = deltaTime;
+	frame.Opacity = 1.0;
+	
 	//controllers
 	foreach AllActors(class'C21FX_Controller', controller) {
-		canvas.reset();
-		canvas.Z = 1.5;
-		canvas.DrawColor.R = 255;
-		canvas.DrawColor.G = 255;
-		canvas.DrawColor.B = 255;
-		canvas.DrawColor.A = 255;
-		controller.render(canvas, deltaTime, 1.0);
+		frame.Canvas.reset();
+		frame.Canvas.Z = 1.5;
+		frame.Canvas.DrawColor.R = 255;
+		frame.Canvas.DrawColor.G = 255;
+		frame.Canvas.DrawColor.B = 255;
+		frame.Canvas.DrawColor.A = 255;
+		controller.render(frame);
 	}
 }
 

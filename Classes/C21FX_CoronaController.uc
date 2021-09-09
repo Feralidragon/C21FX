@@ -5,7 +5,7 @@ class C21FX_CoronaController extends C21FX_Controller;
 #exec TEXTURE IMPORT NAME=DefaultCorona FILE=Textures/Coronas/DefaultCorona.bmp GROUP=Coronas MIPS=OFF LODSET=0
 
 
-//Enumerations
+//Enums
 enum ECoronaColorMode
 {
 	CCM_Auto,
@@ -13,27 +13,19 @@ enum ECoronaColorMode
 	CCM_Light
 };
 
-enum EOcclusionType
+enum ECoronaOcclusionType
 {
-	OT_All,
-	OT_Level,
-	OT_None
+	COT_All,
+	COT_Level,
+	COT_None
 };
 
-enum EActorOcclusionType
+enum ECoronaVisibilityActorSync
 {
-	AOT_Auto,
-	AOT_Same,
-	AOT_Invert,
-	AOT_Ignore
-};
-
-enum ECoronaVisibilityStatus
-{
-	CVS_Hidden,
-	CVS_HidingFast,
-	CVS_HidingSlow,
-	CVS_Visible
+	CVAS_Auto,
+	CVAS_Same,
+	CVAS_Invert,
+	CVAS_Ignore
 };
 
 
@@ -46,11 +38,11 @@ var(Corona) float CoronaSize;
 var(Corona) float CoronaGlow;
 
 
-//Editable properties (occlusion)
-var(Occlusion) EOcclusionType OcclusionType;
-var(Occlusion) EActorOcclusionType ActorOcclusionType;
-var(Occlusion) bool bZoneExclusive;
-var(Occlusion) bool ignoreMovers;
+//Editable properties (visibility)
+var(Visibility) ECoronaOcclusionType CoronaOcclusionType;
+var(Visibility) ECoronaVisibilityActorSync CoronaVisibilityActorSync;
+var(Visibility) bool bZoneExclusive;
+var(Visibility) bool ignoreMovers;
 
 
 //Private properties
@@ -60,9 +52,9 @@ var private C21FX_Corona firstCorona;
 
 replication
 {
-	reliable if (Role == ROLE_Authority) {
-		CoronaTag, CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaGlow, OcclusionType,
-		ActorOcclusionType, bZoneExclusive, ignoreMovers;
+	reliable if (Role == ROLE_Authority && bNetInitial) {
+		CoronaTag, CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaGlow, CoronaOcclusionType,
+		CoronaVisibilityActorSync, bZoneExclusive, ignoreMovers;
 	}
 }
 
@@ -83,18 +75,18 @@ event initialize()
 
 
 //Implemented simulated events
-simulated event render(Canvas canvas, float delta, float opacity)
+simulated event render(RenderFrame frame)
 {
 	//local
 	local C21FX_Corona corona;
 	
 	//initialize
 	initializeCoronas();
-	canvas.Style = ERenderStyle.STY_Translucent;
+	frame.Canvas.Style = ERenderStyle.STY_Translucent;
 	
 	//render
 	for (corona = firstCorona; corona != none; corona = corona.NextCorona) {
-		renderCorona(corona, canvas, delta, opacity);
+		renderCorona(corona, frame);
 	}
 }
 
@@ -125,47 +117,57 @@ final simulated function initializeCoronas()
 	initializedCoronas = true;
 }
 
-final simulated function renderCorona(C21FX_Corona corona, Canvas canvas, float delta, float opacity)
+final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 {
 	
 	//TODO
 	
 }
 
-final simulated function ECoronaVisibilityStatus getCoronaVisibilityStatus(C21FX_Corona corona, Canvas canvas)
+final simulated function bool isCoronaVisible(C21FX_Corona corona, Canvas canvas, out RenderPoint2D point)
 {
 	//local
-	local Actor actor, coronaActor;
+	local Actor coronaActor, canvasActor;
+	local ERenderPoint2DVisibility pointVisibility;
 	
-	//actor
-	actor = canvas.ViewPort.Actor;
-	if (actor == none) {
-		return CVS_Hidden;
+	//actors
+	coronaActor = corona.Actor;
+	canvasActor = canvas.ViewPort.Actor;
+	if (coronaActor == none || canvasActor == none) {
+		return false;
 	}
 	
-	//corona actor
-	coronaActor = corona.Actor;
-	if (coronaActor == none) {
-		return CVS_Hidden;
-	} else if (
-		(ActorOcclusionType == AOT_Auto && coronaActor.bHidden && Keypoint(coronaActor) == none && 
+	//visibility actor sync
+	if (
+		(CoronaVisibilityActorSync == CVAS_Auto && coronaActor.bHidden && Keypoint(coronaActor) == none && 
 		Light(coronaActor) == none && NavigationPoint(coronaActor) == none && Triggers(coronaActor) == none) || 
-		(ActorOcclusionType == AOT_Same && coronaActor.bHidden) || 
-		(ActorOcclusionType == AOT_Invert && !coronaActor.bHidden)
+		(CoronaVisibilityActorSync == CVAS_Same && coronaActor.bHidden) || 
+		(CoronaVisibilityActorSync == CVAS_Invert && !coronaActor.bHidden)
 	) {
-		return CVS_HidingSlow;
+		return false;
 	}
 	
 	//zone
-	if (bZoneExclusive && actor.Region.ZoneNumber != coronaActor.Region.ZoneNumber) {
-		return CVS_HidingSlow;
+	if (bZoneExclusive && coronaActor.Region.ZoneNumber != canvasActor.Region.ZoneNumber) {
+		return false;
+	}
+	
+	//point
+	point = vectorToRenderPoint2D(coronaActor.Location, canvas, pointVisibility);
+	if (pointVisibility == RP2DV_Hidden) {
+		return false;
 	}
 	
 	
 	
-	//TODO
+	//TODO: fast trace
+	//TODO: slow trace
+	//TODO: movers
 	
 	
+	
+	//return
+	return true;
 }
 
 
@@ -180,9 +182,9 @@ defaultproperties
 	CoronaSize=1.0
 	CoronaGlow=1.0
 	
-	//editables (occlusion)
-	OcclusionType=OT_All
-	ActorOcclusionType=AOT_Auto
+	//editables (visibility)
+	CoronaOcclusionType=COT_All
+	CoronaVisibilityActorSync=CVAS_Auto
 	bZoneExclusive=false
 	ignoreMovers=false
 }
