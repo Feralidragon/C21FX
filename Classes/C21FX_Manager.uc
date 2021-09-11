@@ -25,25 +25,40 @@ final simulated function render(Canvas canvas)
 	//local
 	local RenderFrame frame;
 	local C21FX_Controller controller;
+	local Actor viewActor;
+	local vector viewLocation;
+	local rotator viewRotation;
 	
 	//delta time
 	if (deltaTime <= 0.0) {
 		return;
 	}
 	
-	//frame
-	frame.Canvas = canvas;
-	frame.Delta = deltaTime;
-	frame.Opacity = 1.0;
+	//view
+	canvas.ViewPort.Actor.playerCalcView(viewActor, viewLocation, viewRotation);
+	if (viewActor == none) {
+		return;
+	}
 	
 	//controllers
 	foreach AllActors(class'C21FX_Controller', controller) {
-		frame.Canvas.reset();
-		frame.Canvas.Z = 1.5;
-		frame.Canvas.DrawColor.R = 255;
-		frame.Canvas.DrawColor.G = 255;
-		frame.Canvas.DrawColor.B = 255;
-		frame.Canvas.DrawColor.A = 255;
+		//canvas
+		canvas.reset();
+		canvas.Z = 2.5;
+		canvas.DrawColor.R = 255;
+		canvas.DrawColor.G = 255;
+		canvas.DrawColor.B = 255;
+		canvas.DrawColor.A = 255;
+		
+		//frame
+		frame.Canvas = canvas;
+		frame.Delta = deltaTime;
+		frame.Opacity = 1.0;
+		frame.View.Actor = viewActor;
+		frame.View.Location = viewLocation;
+		frame.View.Rotation = viewRotation;
+		
+		//render
 		controller.render(frame);
 	}
 }
