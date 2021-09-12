@@ -193,8 +193,9 @@ final static function color hsbToColor(byte hue, byte saturation, byte brightnes
 	return color;
 }
 
-final static function drawTexture(
-	RenderFrame frame, texture texture, RenderPoint2D point, RenderScale2D scale, optional bool bCenter
+final static function drawSprite(
+	RenderFrame frame, Texture texture, RenderPoint2D point, RenderScale2D scale, optional bool bCenterX,
+	optional bool bCenterY
 ) {
 	//local
 	local float x, y, u, v;
@@ -206,8 +207,10 @@ final static function drawTexture(
 	//xy
 	x = point.X;
 	y = point.Y;
-	if (bCenter) {
+	if (bCenterX) {
 		x -= u * 0.5;
+	}
+	if (bCenterY) {
 		y -= v * 0.5;
 	}
 	

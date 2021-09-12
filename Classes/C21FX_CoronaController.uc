@@ -1,12 +1,12 @@
 
-class C21FX_CoronaController extends C21FX_Controller;
+class C21FX_CoronaController extends C21FX_ViewController;
 
 //Import directives (textures)
 #exec TEXTURE IMPORT NAME=DefaultCorona FILE=Textures/Coronas/DefaultCorona.bmp GROUP=Coronas MIPS=OFF LODSET=0
 
 
 //Constants
-const CORONA_VISIBILITY_FADE_TIME = 0.05;
+const CORONA_VISIBILITY_FADE_TIME = 0.1;
 
 
 //Enumerations
@@ -17,113 +17,49 @@ enum ECoronaColorMode
 	CCM_Light
 };
 
-enum ECoronaOcclusionType
-{
-	COT_All,
-	COT_Level,
-	COT_None
-};
-
-enum ECoronaVisibilityActorSync
-{
-	CVAS_Auto,
-	CVAS_Same,
-	CVAS_Invert,
-	CVAS_Ignore
-};
-
 
 //Editable properties (corona)
-var(Corona) name CoronaTag;
 var(Corona) ECoronaColorMode CoronaColorMode;
 var(Corona) color CoronaColor;
-var(Corona) texture CoronaTexture;
+var(Corona) Texture CoronaTexture;
 var(Corona) float CoronaSize;
 var(Corona) RenderScale2D CoronaScale;
 var(Corona) float CoronaGlow;
 
 
-//Editable properties (visibility)
-var(Visibility) ECoronaOcclusionType CoronaOcclusionType;
-var(Visibility) ECoronaVisibilityActorSync CoronaVisibilityActorSync;
-var(Visibility) bool bZoneExclusive;
-var(Visibility) bool ignoreMovers;
-
-
-//Private properties
-var private bool initializedCoronas;
-var private C21FX_Corona firstCorona;
-
-
 replication
 {
-	reliable if (Role == ROLE_Authority && bNetInitial)
-		CoronaTag, CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaScale, CoronaGlow,
-		CoronaOcclusionType, CoronaVisibilityActorSync, bZoneExclusive, ignoreMovers;
+	reliable if (Role == ROLE_Authority)
+		CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaScale, CoronaGlow;
 }
 
 
 //Implemented events
-event initialize()
+event initializeView()
 {
-	//local
-	local Actor actor;
-	
-	//initialize
 	CoronaSize = fmax(CoronaSize, 0.0);
 	CoronaGlow = fclamp(CoronaGlow, 0.0, 1.0);
-	
-	//actors
-	if (CoronaTag != '') {
-		foreach AllActors(class'Actor', actor, CoronaTag) {
-			actor.bAlwaysRelevant = true;
-		}
-	}
 }
 
 
 //Implemented simulated events
-simulated event render(RenderFrame frame)
+simulated event C21FX_ViewNode createNode(Actor actor)
 {
-	//local
-	local C21FX_Corona corona;
-	
-	//initialize
-	initializeCoronas();
+	return new class'C21FX_Corona';
+}
+
+simulated event initializeViewRender(RenderFrame frame)
+{
 	frame.Canvas.Style = ERenderStyle.STY_Translucent;
-	
-	//render
-	for (corona = firstCorona; corona != none; corona = corona.NextCorona) {
-		renderCorona(corona, frame);
-	}
+}
+
+simulated event renderNode(C21FX_ViewNode node, RenderFrame frame)
+{
+	renderCorona(C21FX_Corona(node), frame);
 }
 
 
 //Final simulated functions
-final simulated function initializeCoronas()
-{
-	//local
-	local Actor actor;
-	local C21FX_Corona corona;
-	
-	//check
-	if (initializedCoronas) {
-		return;
-	}
-	
-	//initialize
-	if (CoronaTag != '') {
-		foreach AllActors(class'Actor', actor, CoronaTag) {
-			corona = new class'C21FX_Corona';
-			corona.Actor = actor;
-			corona.Location = actor.Location;
-			corona.NextCorona = firstCorona;
-			firstCorona = corona;
-		}
-		initializedCoronas = true;
-	}
-}
-
 final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 {
 	//local
@@ -144,7 +80,7 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	}
 	
 	//visibility
-	visible = isCoronaVisible(corona, frame, point);
+	visible = isNodeVisible(corona, frame, point);
 	if (!visible) {
 		point = locationToRenderPoint2D(corona.Location, frame, pointVisibility);
 		if (pointVisibility != RP2DV_Visible) {
@@ -173,7 +109,7 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	scale.V *= CoronaScale.V * CoronaSize;
 	
 	//opacity
-	opacity = frame.Opacity * CoronaGlow * corona.Opacity;
+	opacity = frame.Opacity * corona.Opacity * CoronaGlow;
 	
 	//color mode
 	colorMode = CoronaColorMode;
@@ -188,7 +124,7 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	//color
 	if (colorMode == CCM_Color) {
 		color = CoronaColor;
-	} else if (colorMode == CCM_Light) {
+	} else if (colorMode == CCM_Light && corona.Actor != none) {
 		color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, corona.Actor.LightBrightness);
 	}
 	color.R = byte(float(color.R) * opacity);
@@ -197,88 +133,7 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	
 	//draw
 	frame.Canvas.DrawColor = color;
-	drawTexture(frame, CoronaTexture, point, scale, true);
-}
-
-final simulated function bool isCoronaVisible(C21FX_Corona corona, RenderFrame frame, out RenderPoint2D point)
-{
-	//local
-	local ERenderPoint2DVisibility pointVisibility;
-	local bool visible;
-	
-	//check
-	if (corona.Actor == none) {
-		return false;
-	}
-	
-	//visibility actor sync
-	if (
-		(CoronaVisibilityActorSync == CVAS_Auto && corona.Actor.bHidden && Keypoint(corona.Actor) == none && 
-		Light(corona.Actor) == none && NavigationPoint(corona.Actor) == none && Triggers(corona.Actor) == none) || 
-		(CoronaVisibilityActorSync == CVAS_Same && corona.Actor.bHidden) || 
-		(CoronaVisibilityActorSync == CVAS_Invert && !corona.Actor.bHidden)
-	) {
-		return false;
-	}
-	
-	//zone
-	if (bZoneExclusive && corona.Actor.Region.ZoneNumber != frame.View.Actor.Region.ZoneNumber) {
-		return false;
-	}
-	
-	//point
-	point = locationToRenderPoint2D(corona.Location, frame, pointVisibility);
-	if (pointVisibility != RP2DV_Visible) {
-		return false;
-	}
-	
-	//trace
-	if (CoronaOcclusionType != COT_None) {
-		visible = frame.View.Actor.fastTrace(corona.Location, frame.View.Location);
-		if (
-			(visible && CoronaOcclusionType == COT_All && isCoronaOccluded(corona, frame)) || 
-			(!visible && (!ignoreMovers || isCoronaOccluded(corona, frame)))
-		) {
-			return false;
-		}
-	}
-	
-	//return
-	return true;
-}
-
-final simulated function bool isCoronaOccluded(C21FX_Corona corona, RenderFrame frame)
-{
-	//local
-	local Actor traceActor;
-	local vector hitLocation, hitNormal, traceStart;
-	local bool bTraceActors;
-	
-	//check
-	if (CoronaOcclusionType == COT_None) {
-		return false;
-	}
-	
-	//trace
-	traceActor = frame.View.Actor;
-	traceStart = frame.View.Location;
-	bTraceActors = CoronaOcclusionType == COT_All;
-	while (traceActor != none) {
-		traceActor = traceActor.trace(hitLocation, hitNormal, corona.Location, traceStart, bTraceActors);
-		if (traceActor != none) {
-			if (
-				traceActor == Level || (Mover(traceActor) != none && !ignoreMovers) || 
-				(bTraceActors && !traceActor.bHidden && traceActor.DrawType == DT_Mesh)
-			) {
-				return true;
-			} else {
-				traceStart = hitLocation;
-			}
-		}
-	}
-	
-	//return
-	return false;
+	drawSprite(frame, CoronaTexture, point, scale, true, true);
 }
 
 
@@ -286,17 +141,10 @@ final simulated function bool isCoronaOccluded(C21FX_Corona corona, RenderFrame 
 defaultproperties
 {
 	//editables (corona)
-	CoronaTag=""
 	CoronaColorMode=CCM_Auto
 	CoronaColor=(R=255,G=255,B=255)
-	CoronaTexture=texture'DefaultCorona'
+	CoronaTexture=Texture'DefaultCorona'
 	CoronaSize=1.0
 	CoronaScale=(U=1.0,V=1.0)
 	CoronaGlow=1.0
-	
-	//editables (visibility)
-	CoronaOcclusionType=COT_All
-	CoronaVisibilityActorSync=CVAS_Auto
-	bZoneExclusive=false
-	ignoreMovers=false
 }
