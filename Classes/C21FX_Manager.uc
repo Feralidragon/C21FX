@@ -1,10 +1,6 @@
 
 class C21FX_Manager extends C21FX_Engine nousercreate;
 
-//Constants
-const DEFAULT_RENDER_Z = 2.5;
-
-
 //Private properties
 var private float deltaTime;
 
@@ -48,11 +44,10 @@ final simulated function render(Canvas canvas)
 	foreach AllActors(class'C21FX_Controller', controller) {
 		//canvas
 		canvas.reset();
-		canvas.Z = DEFAULT_RENDER_Z;
+		canvas.Z = MAX_RENDER_Z;
 		canvas.DrawColor.R = 255;
 		canvas.DrawColor.G = 255;
 		canvas.DrawColor.B = 255;
-		canvas.DrawColor.A = 255;
 		
 		//frame
 		frame.Canvas = canvas;
@@ -65,6 +60,9 @@ final simulated function render(Canvas canvas)
 		//render
 		controller.render(frame);
 	}
+	
+	//finalize
+	canvas.reset();
 }
 
 

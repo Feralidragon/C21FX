@@ -62,7 +62,9 @@ event initialize()
 	//actors
 	if (ViewTag != '') {
 		foreach AllActors(class'Actor', actor, ViewTag) {
-			actor.bAlwaysRelevant = true;
+			if (actor.bNoDelete || actor.bStatic) {
+				actor.bAlwaysRelevant = true;
+			}
 		}
 	}
 	
@@ -103,14 +105,16 @@ final simulated function initializeNodes()
 	//initialize
 	if (ViewTag != '') {
 		foreach AllActors(class'Actor', actor, ViewTag) {
-			node = createNode(actor);
-			if (node == none) {
-				node = new class'C21FX_ViewNode';
+			if (actor.bNoDelete || actor.bStatic) {
+				node = createNode(actor);
+				if (node == none) {
+					node = new class'C21FX_ViewNode';
+				}
+				node.Actor = actor;
+				node.Location = actor.Location;
+				node.NextNode = firstNode;
+				firstNode = node;
 			}
-			node.Actor = actor;
-			node.Location = actor.Location;
-			node.NextNode = firstNode;
-			firstNode = node;
 		}
 		initializedNodes = true;
 	}

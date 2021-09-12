@@ -1,6 +1,11 @@
 
 class C21FX extends Actor abstract;
 
+//Constants
+const MIN_RENDER_Z = 2.1;
+const MAX_RENDER_Z = 16.0;
+
+
 //Enumerations
 enum ERenderPoint2DVisibility
 {
@@ -65,6 +70,11 @@ final simulated function PlayerPawn getLocalPlayer()
 
 
 //Final static functions
+final static function setRenderFrameZ(RenderFrame frame, float z)
+{
+	frame.Canvas.Z = fclamp(z, MIN_RENDER_Z, MAX_RENDER_Z);
+}
+
 final static function RenderPoint2D locationToRenderPoint2D(
 	vector location, RenderFrame frame, optional out ERenderPoint2DVisibility visibility, optional bool skipVisibility
 ) {

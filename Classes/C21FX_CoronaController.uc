@@ -7,6 +7,7 @@ class C21FX_CoronaController extends C21FX_ViewController;
 
 //Constants
 const CORONA_VISIBILITY_FADE_TIME = 0.1;
+const CORONA_FIXED_SCALE = 0.125;
 
 
 //Enumerations
@@ -14,7 +15,15 @@ enum ECoronaColorMode
 {
 	CCM_Auto,
 	CCM_Color,
-	CCM_Light
+	CCM_Light,
+	CCM_LightHS,
+	CCM_LightHue
+};
+
+enum ECoronaScaleType
+{
+	CST_Fixed,
+	CST_Perspective
 };
 
 
@@ -24,13 +33,16 @@ var(Corona) color CoronaColor;
 var(Corona) Texture CoronaTexture;
 var(Corona) float CoronaSize;
 var(Corona) RenderScale2D CoronaScale;
+var(Corona) ECoronaScaleType CoronaScaleType;
 var(Corona) float CoronaGlow;
+var(Corona) byte CoronaSaturation;
 
 
 replication
 {
 	reliable if (Role == ROLE_Authority)
-		CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaScale, CoronaGlow;
+		CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaScale, CoronaScaleType, CoronaGlow,
+		CoronaSaturation;
 }
 
 
@@ -68,7 +80,7 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	local RenderScale2D scale;
 	local ERenderPoint2DVisibility pointVisibility;
 	local ECoronaColorMode colorMode;
-	local float opacity;
+	local float fscale, opacity;
 	local Color color;
 	
 	//check
@@ -104,7 +116,14 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	}
 	
 	//scale
-	scale = locationToRenderScale2D(corona.Location, frame);
+	if (CoronaScaleType == CST_Fixed) {
+		fscale = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
+			CORONA_FIXED_SCALE / float(max(CoronaTexture.USize, CoronaTexture.VSize));
+		scale.U = fscale;
+		scale.V = fscale;
+	} else if (CoronaScaleType == CST_Perspective) {
+		scale = locationToRenderScale2D(corona.Location, frame);
+	}
 	scale.U *= CoronaScale.U * CoronaSize;
 	scale.V *= CoronaScale.V * CoronaSize;
 	
@@ -124,8 +143,14 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	//color
 	if (colorMode == CCM_Color) {
 		color = CoronaColor;
-	} else if (colorMode == CCM_Light && corona.Actor != none) {
-		color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, corona.Actor.LightBrightness);
+	} else if (corona.Actor != none) {
+		if (colorMode == CCM_Light) {
+			color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, corona.Actor.LightBrightness);
+		} else if (colorMode == CCM_LightHS) {
+			color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, byte(CoronaGlow * 255.0));
+		} else if (colorMode == CCM_LightHue) {
+			color = hsbToColor(corona.Actor.LightHue, CoronaSaturation, byte(CoronaGlow * 255.0));
+		}
 	}
 	color.R = byte(float(color.R) * opacity);
 	color.G = byte(float(color.G) * opacity);
@@ -133,6 +158,7 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	
 	//draw
 	frame.Canvas.DrawColor = color;
+	setRenderFrameZ(frame, vsize(corona.Location - frame.View.Location));
 	drawSprite(frame, CoronaTexture, point, scale, true, true);
 }
 
@@ -146,5 +172,7 @@ defaultproperties
 	CoronaTexture=Texture'DefaultCorona'
 	CoronaSize=1.0
 	CoronaScale=(U=1.0,V=1.0)
+	CoronaScaleType=CST_Fixed
 	CoronaGlow=1.0
+	CoronaSaturation=0
 }
