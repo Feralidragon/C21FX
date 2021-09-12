@@ -27,7 +27,7 @@ struct RenderView
 {
 	var Actor Actor;
 	var vector Location;
-	var rotation Rotation;
+	var rotator Rotation;
 };
 
 struct RenderFrame
@@ -85,8 +85,8 @@ final static function RenderPoint2D locationToRenderPoint2D(
 	tanY = (axisXDelta dot axisZ) / axisXSize;
 	
 	//finalize
-	point.X = frame.Canvas.ClipX * 0.5 * (1.0 + tanX / tanFovX));
-	point.Y = frame.Canvas.ClipY * 0.5 * (1.0 - tanY / tanFovY));
+	point.X = frame.Canvas.ClipX * 0.5 * (1.0 + tanX / tanFovX);
+	point.Y = frame.Canvas.ClipY * 0.5 * (1.0 - tanY / tanFovY);
 	
 	//visibility
 	visibility = RP2DV_Unknown;
@@ -132,69 +132,65 @@ final static function RenderScale2D locationToRenderScale2D(vector location, Ren
 	return scale;
 }
 
-final static function Color hsbToColor(byte hue, byte saturation, byte brightness)
+final static function color hsbToColor(byte hue, byte saturation, byte brightness)
 {
 	//local
-	local float h, s, b, q, p;
-	local Color color;
-	
-	//no saturation
-	if (saturation == 0) {
-		color.R = brightness;
-		color.G = brightness;
-		color.B = brightness;
-		return color;
-	}
+	local float h, s, b, i, f, p, q, t, cR, cG, cB;
+	local color color;
 	
 	//hsb
 	h = float(hue) / 255.0;
-	s = float(saturation) / 255.0;
+	s = 1.0 - float(saturation) / 255.0;
 	b = float(brightness) / 255.0;
 	
-	//q
-	if (b < 0.5) {
-		q = b * (1.0 + s);
-	} else {
-		q = b + s - b * s;
+	//calculate
+	i = float(int(h * 6.0));
+	f = h * 6.0 - i;
+	p = b * (1.0 - s);
+	q = b * (1.0 - f * s);
+	t = b * (1.0 - (1.0 - f) * s);
+	
+	//set
+	switch (int(i) % 6) {
+		case 0:
+			cR = b;
+			cG = t;
+			cB = p;
+			break;
+		case 1:
+			cR = q;
+			cG = b;
+			cB = p;
+			break;
+		case 2:
+			cR = p;
+			cG = b;
+			cB = t;
+			break;
+		case 3:
+			cR = p;
+			cG = q;
+			cB = b;
+			break;
+		case 4:
+			cR = t;
+			cG = p;
+			cB = b;
+			break;
+		case 5:
+			cR = b;
+			cG = p;
+			cB = q;
+			break;
 	}
 	
-	//p
-	p = 2.0 * b - q;
-	
 	//finalize
-	color.R = hueToRgb(p, q, h + 0.333333);
-	color.G = hueToRgb(p, q, h);
-	color.B = hueToRgb(p, q, h - 0.333333);
+	color.R = byte(cR * 255.0);
+	color.G = byte(cG * 255.0);
+	color.B = byte(cB * 255.0);
 	
 	//return
 	return color;
-}
-
-final static function byte hueToRgb(float p, float q, float t)
-{
-	//local
-	local float c;
-	
-	//normalize
-	if (t < 0.0) {
-		t += 1.0;
-	} else if (t > 1.0) {
-		t -= 1.0;
-	}
-	
-	//calculate
-	if (t < 0.166667) {
-		c = p + (q - p) * 6.0 * t;
-	} else if (t < 0.5) {
-		c = q;
-	} else if (t < 0.666667) {
-		c = p + (q - p) * (0.666667 - t) * 6.0;
-	} else {
-		c = p;
-	}
-	
-	//return
-	return byte(c * 255.0);
 }
 
 final static function drawTexture(

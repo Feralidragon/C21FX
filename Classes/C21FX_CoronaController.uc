@@ -57,10 +57,9 @@ var private C21FX_Corona firstCorona;
 
 replication
 {
-	reliable if (Role == ROLE_Authority && bNetInitial) {
+	reliable if (Role == ROLE_Authority && bNetInitial)
 		CoronaTag, CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaScale, CoronaGlow,
 		CoronaOcclusionType, CoronaVisibilityActorSync, bZoneExclusive, ignoreMovers;
-	}
 }
 
 
@@ -133,11 +132,12 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	local RenderScale2D scale;
 	local ERenderPoint2DVisibility pointVisibility;
 	local ECoronaColorMode colorMode;
+	local float opacity;
 	local Color color;
 	
 	//check
 	if (
-		CoronaTexture == none || CoronaSize == 0.0 || CoronaScale.X == 0.0 || CoronaScale.Y == 0.0 || 
+		CoronaTexture == none || CoronaSize == 0.0 || CoronaScale.U == 0.0 || CoronaScale.V == 0.0 || 
 		CoronaGlow == 0.0
 	) {
 		return;
@@ -172,6 +172,9 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	scale.U *= CoronaScale.U * CoronaSize;
 	scale.V *= CoronaScale.V * CoronaSize;
 	
+	//opacity
+	opacity = frame.Opacity * CoronaGlow * corona.Opacity;
+	
 	//color mode
 	colorMode = CoronaColorMode;
 	if (colorMode == CCM_Auto) {
@@ -188,11 +191,12 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	} else if (colorMode == CCM_Light) {
 		color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, corona.Actor.LightBrightness);
 	}
-	color.R = byte(float(color.R) * CoronaGlow);
-	color.G = byte(float(color.G) * CoronaGlow);
-	color.B = byte(float(color.B) * CoronaGlow);
+	color.R = byte(float(color.R) * opacity);
+	color.G = byte(float(color.G) * opacity);
+	color.B = byte(float(color.B) * opacity);
 	
 	//draw
+	frame.Canvas.DrawColor = color;
 	drawTexture(frame, CoronaTexture, point, scale, true);
 }
 
