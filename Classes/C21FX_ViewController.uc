@@ -19,7 +19,7 @@ enum EViewActorVisibilitySync
 
 
 //Editable properties (events)
-var(Events) name ViewTag;
+var(Events) name NodesTag;
 
 
 //Editable properties (view)
@@ -37,7 +37,7 @@ var private C21FX_ViewNode firstNode;
 replication
 {
 	reliable if (Role == ROLE_Authority && bNetInitial)
-		ViewTag, OcclusionType, ActorVisibilitySync, bZoneExclusive, ignoreMovers;
+		NodesTag, OcclusionType, ActorVisibilitySync, bZoneExclusive, ignoreMovers;
 }
 
 
@@ -60,8 +60,8 @@ event initialize()
 	local Actor actor;
 	
 	//actors
-	if (ViewTag != '') {
-		foreach AllActors(class'Actor', actor, ViewTag) {
+	if (NodesTag != '') {
+		foreach AllActors(class'Actor', actor, NodesTag) {
 			if (actor.bNoDelete || actor.bStatic) {
 				actor.bAlwaysRelevant = true;
 			}
@@ -103,8 +103,8 @@ final simulated function initializeNodes()
 	}
 	
 	//initialize
-	if (ViewTag != '') {
-		foreach AllActors(class'Actor', actor, ViewTag) {
+	if (NodesTag != '') {
+		foreach AllActors(class'Actor', actor, NodesTag) {
 			if (actor.bNoDelete || actor.bStatic) {
 				node = createNode(actor);
 				if (node == none) {
