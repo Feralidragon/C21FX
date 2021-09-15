@@ -1,4 +1,9 @@
 
+/**
+ * Author: Feralidragon
+ * License: https://opensource.org/licenses/MIT The MIT License (MIT)
+ */
+
 class C21FX_ViewController extends C21FX_Controller abstract;
 
 //Enumerations
