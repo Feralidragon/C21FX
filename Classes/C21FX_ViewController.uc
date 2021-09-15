@@ -28,8 +28,8 @@ var(Events) name NodesTag;
 
 
 //Editable properties (view)
-var(View) EViewOcclusionType OcclusionType;
-var(View) EViewActorVisibilitySync ActorVisibilitySync;
+var(View) EViewOcclusionType ViewOcclusionType;
+var(View) EViewActorVisibilitySync ViewActorVisibilitySync;
 var(View) bool bZoneExclusive;
 var(View) bool ignoreMovers;
 
@@ -42,7 +42,7 @@ var private C21FX_ViewNode firstNode;
 replication
 {
 	reliable if (Role == ROLE_Authority && bNetInitial)
-		NodesTag, OcclusionType, ActorVisibilitySync, bZoneExclusive, ignoreMovers;
+		NodesTag, ViewOcclusionType, ViewActorVisibilitySync, bZoneExclusive, ignoreMovers;
 }
 
 
@@ -134,10 +134,10 @@ final simulated function bool isNodeVisible(C21FX_ViewNode node, RenderFrame fra
 	//actor visibility sync
 	actorHidden = node.Actor == none || node.Actor.bHidden;
 	if (
-		(ActorVisibilitySync == VAVS_Auto && actorHidden && Keypoint(node.Actor) == none && 
+		(ViewActorVisibilitySync == VAVS_Auto && actorHidden && Keypoint(node.Actor) == none && 
 		Light(node.Actor) == none && NavigationPoint(node.Actor) == none && Triggers(node.Actor) == none) || 
-		(ActorVisibilitySync == VAVS_Same && actorHidden) || 
-		(ActorVisibilitySync == VAVS_Invert && !actorHidden)
+		(ViewActorVisibilitySync == VAVS_Same && actorHidden) || 
+		(ViewActorVisibilitySync == VAVS_Invert && !actorHidden)
 	) {
 		return false;
 	}
@@ -154,10 +154,10 @@ final simulated function bool isNodeVisible(C21FX_ViewNode node, RenderFrame fra
 	}
 	
 	//trace
-	if (OcclusionType != VOT_None) {
+	if (ViewOcclusionType != VOT_None) {
 		visible = frame.View.Actor.fastTrace(node.Location, frame.View.Location);
 		if (
-			(visible && OcclusionType == VOT_All && isNodeOccluded(node, frame)) || 
+			(visible && ViewOcclusionType == VOT_All && isNodeOccluded(node, frame)) || 
 			(!visible && (!ignoreMovers || isNodeOccluded(node, frame)))
 		) {
 			return false;
@@ -176,14 +176,14 @@ final simulated function bool isNodeOccluded(C21FX_ViewNode node, RenderFrame fr
 	local bool bTraceActors;
 	
 	//check
-	if (OcclusionType == VOT_None) {
+	if (ViewOcclusionType == VOT_None) {
 		return false;
 	}
 	
 	//trace
 	traceActor = frame.View.Actor;
 	traceStart = frame.View.Location;
-	bTraceActors = OcclusionType == VOT_All;
+	bTraceActors = ViewOcclusionType == VOT_All;
 	while (traceActor != none) {
 		traceActor = traceActor.trace(hitLocation, hitNormal, node.Location, traceStart, bTraceActors);
 		if (traceActor != none) {
@@ -207,8 +207,8 @@ final simulated function bool isNodeOccluded(C21FX_ViewNode node, RenderFrame fr
 defaultproperties
 {
 	//editables (view)
-	OcclusionType=VOT_All
-	ActorVisibilitySync=VAVS_Auto
+	ViewOcclusionType=VOT_All
+	ViewActorVisibilitySync=VAVS_Auto
 	bZoneExclusive=false
 	ignoreMovers=false
 }
