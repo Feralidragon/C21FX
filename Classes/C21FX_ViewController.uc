@@ -30,6 +30,8 @@ var(Events) name NodesTag;
 //Editable properties (view)
 var(View) EViewOcclusionType ViewOcclusionType;
 var(View) EViewActorVisibilitySync ViewActorVisibilitySync;
+var(View) int ViewDistance;
+var(View) int ViewFadeDistance;
 var(View) bool bZoneExclusive;
 var(View) bool ignoreMovers;
 
@@ -42,7 +44,8 @@ var private C21FX_ViewNode firstNode;
 replication
 {
 	reliable if (Role == ROLE_Authority && bNetInitial)
-		NodesTag, ViewOcclusionType, ViewActorVisibilitySync, bZoneExclusive, ignoreMovers;
+		NodesTag, ViewOcclusionType, ViewActorVisibilitySync, ViewDistance, ViewFadeDistance, bZoneExclusive,
+		ignoreMovers;
 }
 
 
@@ -83,13 +86,31 @@ simulated event render(RenderFrame frame)
 {
 	//local
 	local C21FX_ViewNode node;
+	local float frameOpacity, distance, viewDistanceDelta;
 	
 	//initialize
 	initializeNodes();
 	initializeViewRender(frame);
+	frameOpacity = frame.Opacity;
+	viewDistanceDelta = ViewDistance - ViewFadeDistance;
 	
 	//render
 	for (node = firstNode; node != none; node = node.NextNode) {
+		//distance
+		distance = vsize(node.Location - frame.View.Location);
+		if (distance > ViewDistance) {
+			continue;
+		}
+		
+		//distance (fade)
+		if (viewDistanceDelta > 0.0) {
+			frame.Opacity = frameOpacity;
+			if (distance >= ViewFadeDistance) {
+				frame.Opacity *= (ViewDistance - distance) / viewDistanceDelta;
+			}
+		}
+		
+		//render
 		renderNode(node, frame);
 	}
 }
@@ -209,6 +230,8 @@ defaultproperties
 	//editables (view)
 	ViewOcclusionType=VOT_All
 	ViewActorVisibilitySync=VAVS_Auto
+	ViewDistance=20000
+	ViewFadeDistance=18000
 	bZoneExclusive=false
 	ignoreMovers=false
 }
