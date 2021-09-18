@@ -49,7 +49,7 @@ final simulated function render(Canvas canvas)
 	foreach AllActors(class'C21FX_Controller', controller) {
 		//canvas
 		canvas.reset();
-		canvas.Z = MAX_RENDER_Z;
+		canvas.Z = MAX_RENDER_NEAREST_Z;
 		canvas.DrawColor.R = 255;
 		canvas.DrawColor.G = 255;
 		canvas.DrawColor.B = 255;
@@ -63,7 +63,7 @@ final simulated function render(Canvas canvas)
 		frame.View.Rotation = viewRotation;
 		
 		//render
-		controller.render(frame);
+		controller.drawFrame(frame);
 	}
 	
 	//finalize

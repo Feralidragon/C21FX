@@ -4,7 +4,7 @@
  * License: https://opensource.org/licenses/MIT The MIT License (MIT)
  */
 
-class C21FX_CoronaController extends C21FX_ViewController;
+class C21FX_CoronaController extends C21FX_Controller;
 
 //Import directives (textures)
 #exec TEXTURE IMPORT NAME=DefaultCorona FILE=Textures/Coronas/DefaultCorona.bmp GROUP=Coronas MIPS=OFF LODSET=0
@@ -19,7 +19,7 @@ const CORONA_FIXED_SCALE = 0.125;
 enum ECoronaColorMode
 {
 	CCM_Auto,
-	CCM_Color,
+	CCM_Value,
 	CCM_Light,
 	CCM_LightHS,
 	CCM_LightHue
@@ -32,52 +32,68 @@ enum ECoronaScaleType
 };
 
 
-//Editable properties (corona)
-var(Corona) ECoronaColorMode CoronaColorMode;
-var(Corona) color CoronaColor;
-var(Corona) Texture CoronaTexture;
-var(Corona) float CoronaSize;
-var(Corona) RenderScale2D CoronaScale;
-var(Corona) ECoronaScaleType CoronaScaleType;
-var(Corona) float CoronaGlow;
-var(Corona) byte CoronaSaturation;
+//Structures
+struct NodeCoronaScale
+{
+	var() ECoronaScaleType Type;
+	var() RenderScale2D Value;
+};
+
+struct NodeCoronaColor
+{
+	var() ECoronaColorMode Mode;
+	var() color Value;
+};
+
+struct NodeCorona
+{
+	var() Texture Texture;
+	var() float Size;
+	var() float Glow;
+	var() NodeCoronaScale Scale;
+	var() NodeCoronaColor Color;
+	var() byte Saturation;
+};
+
+
+//Editable properties (controller)
+var(Controller) NodeCorona Corona;
 
 
 replication
 {
 	reliable if (Role == ROLE_Authority)
-		CoronaColorMode, CoronaColor, CoronaTexture, CoronaSize, CoronaScale, CoronaScaleType, CoronaGlow,
-		CoronaSaturation;
+		Corona;
 }
 
 
 //Implemented events
-event initializeView()
+event initialize()
 {
-	CoronaSize = fmax(CoronaSize, 0.0);
-	CoronaGlow = fclamp(CoronaGlow, 0.0, 1.0);
+	Corona.Size = fmax(Corona.Size, 0.0);
+	Corona.Glow = fclamp(Corona.Glow, 0.0, 1.0);
 }
 
 
 //Implemented simulated events
-simulated event C21FX_ViewNode createNode(Actor actor)
+simulated event C21FX_Node createNode(Actor actor)
 {
-	return new class'C21FX_Corona';
+	return new class'C21FX_CoronaNode';
 }
 
-simulated event initializeViewRender(RenderFrame frame)
+simulated event initializeNodesRender(RenderFrame frame)
 {
 	frame.Canvas.Style = ERenderStyle.STY_Translucent;
 }
 
-simulated event renderNode(C21FX_ViewNode node, RenderFrame frame)
+simulated event renderNode(C21FX_Node node, RenderFrame frame)
 {
-	renderCorona(C21FX_Corona(node), frame);
+	renderCoronaNode(C21FX_CoronaNode(node), frame);
 }
 
 
 //Final simulated functions
-final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
+final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame frame)
 {
 	//local
 	local bool visible;
@@ -86,75 +102,75 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	local ERenderPoint2DVisibility pointVisibility;
 	local ECoronaColorMode colorMode;
 	local float fscale, opacity;
-	local Color color;
+	local color color;
 	
 	//check
 	if (
-		CoronaTexture == none || CoronaSize == 0.0 || CoronaScale.U == 0.0 || CoronaScale.V == 0.0 || 
-		CoronaGlow == 0.0
+		Corona.Texture == none || Corona.Size == 0.0 || Corona.Scale.Value.U == 0.0 || Corona.Scale.Value.V == 0.0 || 
+		Corona.Glow == 0.0
 	) {
 		return;
 	}
 	
 	//visibility
-	visible = isNodeVisible(corona, frame, point);
+	visible = isNodeVisible(node, frame, point);
 	if (!visible) {
-		point = locationToRenderPoint2D(corona.Location, frame, pointVisibility);
+		point = locationToRenderPoint2D(node.Location, frame, pointVisibility);
 		if (pointVisibility != RP2DV_Visible) {
 			return;
 		}
 	}
 	
 	//opacity
-	if (visible && corona.Opacity < 1.0) {
-		corona.Opacity = fmin(corona.Opacity + frame.Delta / CORONA_VISIBILITY_FADE_TIME, 1.0);
+	if (visible && node.Opacity < 1.0) {
+		node.Opacity = fmin(node.Opacity + frame.Delta / CORONA_VISIBILITY_FADE_TIME, 1.0);
 	} else if (!visible) {
 		//reduce
-		if (corona.Opacity > 0.0) {
-			corona.Opacity = fmax(corona.Opacity - frame.Delta / CORONA_VISIBILITY_FADE_TIME, 0.0);
+		if (node.Opacity > 0.0) {
+			node.Opacity = fmax(node.Opacity - frame.Delta / CORONA_VISIBILITY_FADE_TIME, 0.0);
 		}
 		
 		//check
-		if (corona.Opacity == 0.0) {
+		if (node.Opacity == 0.0) {
 			return;
 		}
 	}
 	
 	//scale
-	if (CoronaScaleType == CST_Fixed) {
+	if (Corona.Scale.Type == CST_Fixed) {
 		fscale = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
-			CORONA_FIXED_SCALE / float(max(CoronaTexture.USize, CoronaTexture.VSize));
+			CORONA_FIXED_SCALE / float(max(Corona.Texture.USize, Corona.Texture.VSize));
 		scale.U = fscale;
 		scale.V = fscale;
-	} else if (CoronaScaleType == CST_Perspective) {
-		scale = locationToRenderScale2D(corona.Location, frame);
+	} else if (Corona.Scale.Type == CST_Perspective) {
+		scale = locationToRenderScale2D(node.Location, frame);
 	}
-	scale.U *= CoronaScale.U * CoronaSize;
-	scale.V *= CoronaScale.V * CoronaSize;
+	scale.U *= Corona.Scale.Value.U * Corona.Size;
+	scale.V *= Corona.Scale.Value.V * Corona.Size;
 	
 	//opacity
-	opacity = frame.Opacity * corona.Opacity * CoronaGlow;
+	opacity = frame.Opacity * node.Opacity * Corona.Glow;
 	
 	//color mode
-	colorMode = CoronaColorMode;
+	colorMode = Corona.Color.Mode;
 	if (colorMode == CCM_Auto) {
-		if (Light(corona.Actor) != none) {
+		if (Light(node.Actor) != none) {
 			colorMode = CCM_Light;
 		} else {
-			colorMode = CCM_Color;
+			colorMode = CCM_Value;
 		}
 	}
 	
 	//color
-	if (colorMode == CCM_Color) {
-		color = CoronaColor;
-	} else if (corona.Actor != none) {
+	if (colorMode == CCM_Value) {
+		color = Corona.Color.Value;
+	} else if (node.Actor != none) {
 		if (colorMode == CCM_Light) {
-			color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, corona.Actor.LightBrightness);
+			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, node.Actor.LightBrightness);
 		} else if (colorMode == CCM_LightHS) {
-			color = hsbToColor(corona.Actor.LightHue, corona.Actor.LightSaturation, byte(CoronaGlow * 255.0));
+			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, 255);
 		} else if (colorMode == CCM_LightHue) {
-			color = hsbToColor(corona.Actor.LightHue, CoronaSaturation, byte(CoronaGlow * 255.0));
+			color = hsbToColor(node.Actor.LightHue, Corona.Saturation, 255);
 		}
 	}
 	color.R = byte(float(color.R) * opacity);
@@ -163,21 +179,14 @@ final simulated function renderCorona(C21FX_Corona corona, RenderFrame frame)
 	
 	//draw
 	frame.Canvas.DrawColor = color;
-	setRenderFrameZ(frame, vsize(corona.Location - frame.View.Location));
-	drawSprite(frame, CoronaTexture, point, scale, true, true);
+	setRenderFrameNearestZ(frame, node.Distance);
+	drawSprite(frame, Corona.Texture, point, scale, true, true);
 }
 
 
 
 defaultproperties
 {
-	//editables (corona)
-	CoronaColorMode=CCM_Auto
-	CoronaColor=(R=255,G=255,B=255)
-	CoronaTexture=Texture'DefaultCorona'
-	CoronaSize=1.0
-	CoronaScale=(U=1.0,V=1.0)
-	CoronaScaleType=CST_Fixed
-	CoronaGlow=1.0
-	CoronaSaturation=0
+	//editables (controller)
+	Corona=(Texture=Texture'DefaultCorona',Glow=1.0,Size=1.0,Scale=(Value=(U=1.0,V=1.0)),Color=(Value=(R=255,G=255,B=255)))
 }

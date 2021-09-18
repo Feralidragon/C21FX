@@ -4,7 +4,7 @@
  * License: https://opensource.org/licenses/MIT The MIT License (MIT)
  */
 
-class C21FX_Corona extends C21FX_ViewNode nousercreate;
+class C21FX_CoronaNode extends C21FX_Node nousercreate;
 
 //Properties
 var float Opacity;
