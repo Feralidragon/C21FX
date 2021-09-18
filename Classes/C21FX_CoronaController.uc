@@ -188,5 +188,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 defaultproperties
 {
 	//editables (controller)
-	Corona=(Texture=Texture'DefaultCorona',Glow=1.0,Size=1.0,Scale=(Value=(U=1.0,V=1.0)),Color=(Value=(R=255,G=255,B=255)))
+	Corona=(Texture=Texture'DefaultCorona',Glow=1.0,Size=1.0)
+	Corona=(Scale=(Value=(U=1.0,V=1.0)))
+	Corona=(Color=(Value=(R=255,G=255,B=255)))
 }

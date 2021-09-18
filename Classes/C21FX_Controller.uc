@@ -31,6 +31,7 @@ struct NodeVisibility
 	var() bool bZoneExclusive;
 	var() EVisibilityOcclusionType OcclusionType;
 	var() EVisibilityActorSync ActorSync;
+	var() string TransparencyTag;
 };
 
 
@@ -77,6 +78,9 @@ event postBeginPlay()
 	local bool hasManager;
 	local C21FX_Manager manager;
 	local Actor actor;
+	
+	//initialize
+	Visibility.TransparencyTag = caps(Visibility.TransparencyTag);
 	
 	//manager (check)
 	foreach AllActors(class'C21FX_Manager', manager) {
@@ -332,22 +336,29 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 	while (traceActor != none) {
 		traceActor = traceActor.trace(hitLocation, hitNormal, node.Location, traceStart, bTraceActors);
 		if (traceActor != none) {
-			if (Mover(traceActor) != none && instr(caps(traceActor.Tag), "GLASS") != -1) {
-				mTraceActor = trace(mHitLocation, mHitNormal, hitLocation, node.Location);
-				if (mTraceActor == traceActor) {
+			//next
+			traceStart = hitLocation;
+			
+			//glass
+			if (instr(caps(traceActor.Tag), Visibility.TransparencyTag) != -1) {
+				if (Mover(traceActor) != none) {
+					mTraceActor = trace(mHitLocation, mHitNormal, hitLocation, node.Location);
+					if (mTraceActor != traceActor) {
+						return true;
+					}
 					traceStart = mHitLocation + mHitNormal;
-				} else {
-					return true;
 				}
-			} else if (
-				traceActor == Level || (
+				continue;
+			}
+			
+			//actor	
+			if (
+				traceActor == Level || Mover(traceActor) != none || (
 					bTraceActors && !traceActor.bHidden && traceActor.DrawType == DT_Mesh && 
 					(traceActor.Style == STY_Normal || traceActor.Style == STY_Masked)
 				)
 			) {
 				return true;
-			} else {
-				traceStart = hitLocation;
 			}
 		}
 	}
@@ -361,7 +372,7 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 defaultproperties
 {
 	//editables (controller)
-	Visibility=(ViewDistance=20000,ViewFadeDistance=18000)
+	Visibility=(ViewDistance=20000,ViewFadeDistance=18000,TransparencyTag="glass")
 	
 	//network
 	bAlwaysRelevant=true
