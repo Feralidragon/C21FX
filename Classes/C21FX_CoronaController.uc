@@ -106,8 +106,8 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	
 	//check
 	if (
-		Corona.Texture == none || Corona.Size == 0.0 || Corona.Scale.Value.U == 0.0 || Corona.Scale.Value.V == 0.0 || 
-		Corona.Glow == 0.0
+		node == none || Corona.Texture == none || Corona.Size == 0.0 || Corona.Scale.Value.U == 0.0 || 
+		Corona.Scale.Value.V == 0.0 || Corona.Glow == 0.0
 	) {
 		return;
 	}

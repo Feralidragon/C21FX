@@ -215,6 +215,11 @@ final static function drawSprite(
 	//local
 	local float x, y, u, v;
 	
+	//check
+	if (texture == none) {
+		return;
+	}
+	
 	//uv
 	u = float(texture.USize) * scale.U;
 	v = float(texture.VSize) * scale.V;

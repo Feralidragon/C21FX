@@ -41,7 +41,8 @@ var(Controller) NodeVisibility Visibility;
 
 //Private properties
 var private bool initializedNodes;
-var private C21FX_Node firstNode;
+var private C21FX_Node rootNode;
+var private C21FX_Point rootPoint;
 
 
 replication
@@ -56,8 +57,6 @@ event initialize();
 
 
 //Implementable simulated events
-simulated event initializeRender(RenderFrame frame);
-
 simulated event render(RenderFrame frame);
 
 simulated event C21FX_Node createNode(Actor actor);
@@ -65,6 +64,10 @@ simulated event C21FX_Node createNode(Actor actor);
 simulated event initializeNodesRender(RenderFrame frame);
 
 simulated event renderNode(C21FX_Node node, RenderFrame frame);
+
+simulated event C21FX_Link createLink(C21FX_Point point1, C21FX_Point point2);
+
+simulated event renderLink(C21FX_Link link, RenderFrame frame);
 
 
 //Events
@@ -104,21 +107,34 @@ event postBeginPlay()
 final simulated function drawFrame(RenderFrame frame)
 {
 	//local
-	local C21FX_Node node;
-	local float frameOpacity, viewDistanceDelta;
-	
-	//initialize
-	initializeRender(frame);
-	frameOpacity = frame.Opacity;
-	viewDistanceDelta = Visibility.ViewDistance - Visibility.ViewFadeDistance;
+	local C21FX_Point point;
 	
 	//render
 	render(frame);
 	
 	//nodes
 	initializeNodes();
+	drawNodes(rootNode, frame);
+	
+	//points
+	for (point = rootPoint; point != none; point = point.NextPoint) {
+		drawLinks(point, frame);
+	}
+}
+
+final simulated function drawNodes(C21FX_Node rootNode, RenderFrame frame)
+{
+	//local
+	local C21FX_Node node;
+	local float frameOpacity, viewDistanceDelta;
+	
+	//initialize
+	frameOpacity = frame.Opacity;
+	viewDistanceDelta = Visibility.ViewDistance - Visibility.ViewFadeDistance;
 	initializeNodesRender(frame);
-	for (node = firstNode; node != none; node = node.NextNode) {
+	
+	//nodes
+	for (node = rootNode; node != none; node = node.NextNode) {
 		//initialize
 		frame.Opacity = frameOpacity;
 		
@@ -133,13 +149,42 @@ final simulated function drawFrame(RenderFrame frame)
 		//render
 		renderNode(node, frame);
 	}
+	
+	//finalize
+	frame.Opacity = frameOpacity;
+}
+
+final simulated function drawLinks(C21FX_Point point, RenderFrame frame)
+{
+	//local
+	local C21FX_Link link;
+	
+	//check
+	if (point == none || point.bTraversing) {
+		return;
+	}
+	
+	//initialize
+	point.bTraversing = true;
+	
+	//links
+	for (link = point.getRootLink(); link != none; link = link.NextLink) {
+		//render
+		renderLink(link, frame);
+		
+		//recursive
+		drawLinks(link.Point2, frame);
+	}
+	
+	//finalize
+	point.bTraversing = false;
 }
 
 final simulated function initializeNodes()
 {
 	//local
 	local Actor actor;
-	local C21FX_Node node;
+	local C21FX_Point point;
 	
 	//check
 	if (initializedNodes) {
@@ -150,17 +195,75 @@ final simulated function initializeNodes()
 	if (NodesTag != '') {
 		foreach AllActors(class'Actor', actor, NodesTag) {
 			if (actor.bNoDelete || actor.bStatic) {
-				node = createNode(actor);
-				if (node == none) {
-					node = new class'C21FX_Node';
+				//point
+				point = C21FX_Point(actor);
+				if (point != none) {
+					initializeLinks(point);
+					if (point.isLinked()) {
+						point.NextPoint = rootPoint;
+						rootPoint = point;
+						continue;
+					}
 				}
-				node.Actor = actor;
-				node.Location = actor.Location;
-				node.NextNode = firstNode;
-				firstNode = node;
+				
+				//node
+				generateNode(rootNode, actor);
 			}
 		}
 		initializedNodes = true;
+	}
+}
+
+final simulated function generateNode(out C21FX_Node rootNode, Actor actor)
+{
+	//local
+	local C21FX_Node node;
+	
+	//check
+	if (actor == none) {
+		return;
+	}
+	
+	//node
+	node = createNode(actor);
+	if (node == none) {
+		node = new class'C21FX_Node';
+	}
+	node.Actor = actor;
+	node.Location = actor.Location;
+	node.NextNode = rootNode;
+	rootNode = node;
+}
+
+final simulated function initializeLinks(C21FX_Point point)
+{
+	//local
+	local C21FX_Link link;
+	local C21FX_Point point2;
+	
+	//check
+	if (point == none || point.Event == '' || point.hasLinks()) {
+		return;
+	}
+	
+	//initialize
+	foreach AllActors(class'C21FX_Point', point2, point.Event) {
+		//check
+		if (point2 == point) {
+			continue;
+		}
+		
+		//link
+		link = createLink(point, point2);
+		if (link == none) {
+			link = new class'C21FX_Link';
+		}
+		link.Point1 = point;
+		link.Point2 = point2;
+		point.addLink(link);
+		
+		//recursive
+		initializeLinks(point2);
 	}
 }
 
@@ -170,11 +273,17 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 	local ERenderPoint2DVisibility pointVisibility;
 	local bool actorHidden;
 	
+	//check
+	if (node == none) {
+		return false;
+	}
+	
 	//actor sync
 	actorHidden = node.Actor == none || node.Actor.bHidden;
 	if (
-		(Visibility.ActorSync == VAS_Auto && actorHidden && Keypoint(node.Actor) == none && 
-		Light(node.Actor) == none && NavigationPoint(node.Actor) == none && Triggers(node.Actor) == none) || 
+		(Visibility.ActorSync == VAS_Auto && actorHidden && C21FX_Point(node.Actor) == none && 
+		Keypoint(node.Actor) == none && Light(node.Actor) == none && NavigationPoint(node.Actor) == none && 
+		Triggers(node.Actor) == none) || 
 		(Visibility.ActorSync == VAS_Same && actorHidden) || 
 		(Visibility.ActorSync == VAS_Invert && !actorHidden)
 	) {
@@ -212,7 +321,7 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 	local bool bTraceActors;
 	
 	//check
-	if (Visibility.OcclusionType == VOT_None) {
+	if (node == none || Visibility.OcclusionType == VOT_None) {
 		return false;
 	}
 	

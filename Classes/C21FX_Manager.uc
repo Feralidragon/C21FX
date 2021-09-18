@@ -34,8 +34,8 @@ final simulated function render(Canvas canvas)
 	local vector viewLocation;
 	local rotator viewRotation;
 	
-	//delta time
-	if (deltaTime <= 0.0) {
+	//check
+	if (canvas == none || deltaTime <= 0.0) {
 		return;
 	}
 	
