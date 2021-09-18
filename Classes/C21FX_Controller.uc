@@ -26,10 +26,9 @@ enum EVisibilityActorSync
 //Structures
 struct NodeVisibility
 {
-	var() bool bZoneExclusive;
-	var() bool ignoreMovers;
 	var() int ViewDistance;
 	var() int ViewFadeDistance;
+	var() bool bZoneExclusive;
 	var() EVisibilityOcclusionType OcclusionType;
 	var() EVisibilityActorSync ActorSync;
 };
@@ -169,7 +168,7 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 {
 	//local
 	local ERenderPoint2DVisibility pointVisibility;
-	local bool actorHidden, visible;
+	local bool actorHidden;
 	
 	//actor sync
 	actorHidden = node.Actor == none || node.Actor.bHidden;
@@ -196,15 +195,9 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 		return false;
 	}
 	
-	//trace
-	if (Visibility.OcclusionType != VOT_None) {
-		visible = frame.View.Actor.fastTrace(node.Location, frame.View.Location);
-		if (
-			(visible && Visibility.OcclusionType == VOT_All && isNodeOccluded(node, frame)) || 
-			(!visible && (!Visibility.ignoreMovers || isNodeOccluded(node, frame)))
-		) {
-			return false;
-		}
+	//occlusion
+	if (isNodeOccluded(node, frame)) {
+		return false;
 	}
 	
 	//return
@@ -214,8 +207,8 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 {
 	//local
-	local Actor traceActor;
-	local vector hitLocation, hitNormal, traceStart;
+	local Actor traceActor, mTraceActor;
+	local vector hitLocation, hitNormal, traceStart, mHitLocation, mHitNormal;
 	local bool bTraceActors;
 	
 	//check
@@ -230,9 +223,18 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 	while (traceActor != none) {
 		traceActor = traceActor.trace(hitLocation, hitNormal, node.Location, traceStart, bTraceActors);
 		if (traceActor != none) {
-			if (
-				traceActor == Level || (Mover(traceActor) != none && !Visibility.ignoreMovers) || 
-				(bTraceActors && !traceActor.bHidden && traceActor.DrawType == DT_Mesh)
+			if (Mover(traceActor) != none && instr(caps(traceActor.Tag), "GLASS") != -1) {
+				mTraceActor = trace(mHitLocation, mHitNormal, hitLocation, node.Location);
+				if (mTraceActor == traceActor) {
+					traceStart = mHitLocation + mHitNormal;
+				} else {
+					return true;
+				}
+			} else if (
+				traceActor == Level || (
+					bTraceActors && !traceActor.bHidden && traceActor.DrawType == DT_Mesh && 
+					(traceActor.Style == STY_Normal || traceActor.Style == STY_Masked)
+				)
 			) {
 				return true;
 			} else {
