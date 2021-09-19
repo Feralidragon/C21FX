@@ -12,7 +12,7 @@ class C21FX_CoronaController extends C21FX_Controller;
 
 //Constants
 const CORONA_VISIBILITY_FADE_TIME = 0.1;
-const CORONA_FIXED_SCALE = 0.125;
+const CORONA_SCALE_FIXED = 0.125;
 
 
 //Enumerations
@@ -29,7 +29,8 @@ enum ECoronaScaleMode
 {
 	CSM_Auto,
 	CSM_Fixed,
-	CSM_World
+	CSM_World,
+	CSM_Distance
 };
 
 enum ECoronaLinkAlignment
@@ -232,11 +233,20 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	}
 	
 	//scale
-	if (scaleMode == CSM_Fixed) {
+	if (scaleMode == CSM_Fixed || scaleMode == CSM_Distance) {
+		//scale
 		fscale = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
-			CORONA_FIXED_SCALE / float(max(Corona.Texture.USize, Corona.Texture.VSize));
+			CORONA_SCALE_FIXED / float(max(Corona.Texture.USize, Corona.Texture.VSize));
+		
+		//distance
+		if (scaleMode == CSM_Distance && Visibility.ViewDistance > 0.0) {
+			fscale *= 1.0 - (node.Distance / Visibility.ViewDistance);
+		}
+		
+		//finalize
 		scale.U = fscale;
 		scale.V = fscale;
+		
 	} else if (scaleMode == CSM_World) {
 		scale = locationToRenderScale2D(node.Location, frame);
 	}
@@ -265,6 +275,11 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		}
 	}
 	
+	//scale (check)
+	if (scale.U <= 0.0 || scale.V <= 0.0) {
+		return;
+	}
+	
 	//opacity
 	opacity = frame.Opacity * node.Opacity * Corona.Glow;
 	
@@ -275,6 +290,11 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		} else {
 			opacity *= lerp(node.Degree, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
 		}
+	}
+	
+	//opacity (check)
+	if (opacity <= 0.0) {
+		return;
 	}
 	
 	//color mode
@@ -339,6 +359,11 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	color.R = byte(float(color.R) * opacity);
 	color.G = byte(float(color.G) * opacity);
 	color.B = byte(float(color.B) * opacity);
+	
+	//color (check)
+	if (color.R == 0 && color.G == 0 && color.B == 0) {
+		return;
+	}
 	
 	//draw
 	frame.Canvas.DrawColor = color;
