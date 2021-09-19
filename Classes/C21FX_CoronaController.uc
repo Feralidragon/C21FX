@@ -6,13 +6,23 @@
 
 class C21FX_CoronaController extends C21FX_Controller;
 
-//Import directives (textures)
-#exec TEXTURE IMPORT NAME=DefaultCorona FILE=Textures/Coronas/DefaultCorona.bmp GROUP=Coronas MIPS=OFF LODSET=0
+//Import directives (textures - coronas)
+#exec TEXTURE IMPORT NAME=Corona FILE=Textures/Coronas/Corona.bmp GROUP=Coronas MIPS=OFF LODSET=0
+
+//Import directives (textures - lensflares)
+#exec TEXTURE IMPORT NAME=Lensflare0 FILE=Textures/Lensflares/Lensflare0.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare1 FILE=Textures/Lensflares/Lensflare1.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare2 FILE=Textures/Lensflares/Lensflare2.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare3 FILE=Textures/Lensflares/Lensflare3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare4 FILE=Textures/Lensflares/Lensflare4.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare5 FILE=Textures/Lensflares/Lensflare5.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 
 
 //Constants
 const CORONA_VISIBILITY_FADE_TIME = 0.1;
 const CORONA_SCALE_FIXED = 0.125;
+const LENSFLARE_ENTRIES_COUNT = 8;
+const LENSFLARE_PRESETS_COUNT = 4;
 
 
 //Enumerations
@@ -46,6 +56,27 @@ enum ECoronaLinkGradientMode
 	CLGM_None,
 	CLGM_Linear,
 	CLGM_NonLinear
+};
+
+enum ELensflareKind
+{
+	LK_None,
+	LK_Preset1,
+	LK_Preset2,
+	LK_Preset3,
+	LK_Preset4,
+	LK_Custom
+};
+
+enum ELensflareColorMode
+{
+	LCM_Auto,
+	LCM_Value,
+	LCM_Add,
+	LCM_Subtract,
+	LCM_Intersect,
+	LCM_Merge,
+	LCM_Exclude
 };
 
 
@@ -124,15 +155,70 @@ struct NodeCorona
 	var() NodeCoronaLink Link;
 };
 
+struct NodeLensflareColor
+{
+	var() ELensflareColorMode Mode;
+	var() color Min;
+	var() color Max;
+};
+
+struct NodeLensflareSize
+{
+	var() float Min;
+	var() float Max;
+};
+
+struct NodeLensflareScale
+{
+	var() RenderScale2D Min;
+	var() RenderScale2D Max;
+};
+
+struct NodeLensflareDegree
+{
+	var() float Min;
+	var() float Max;
+	var() float FadeMin;
+	var() float FadeMax;
+};
+
+struct NodeLensflareEntry
+{
+	var() float Glow;
+	var() float Position;
+	var() Texture Texture;
+	var() NodeLensflareColor Color;
+	var() NodeLensflareSize Size;
+	var() NodeLensflareScale Scale;
+	var() NodeLensflareDegree Degree;
+};
+
+struct NodeLensflare
+{
+	var() ELensflareKind Kind;
+	var() NodeLensflareEntry Custom[LENSFLARE_ENTRIES_COUNT];
+};
+
+struct NodeLensflarePreset
+{
+	var NodeLensflareEntry Entries[LENSFLARE_ENTRIES_COUNT];
+};
+
 
 //Editable properties (controller)
 var(Controller) NodeCorona Corona;
+var(Controller) NodeLensflare Lensflare;
+
+
+//Private properties
+var private NodeLensflarePreset LensflarePresets[LENSFLARE_PRESETS_COUNT];
+var private NodeLensflareEntry LensflareEntries[LENSFLARE_ENTRIES_COUNT];
 
 
 replication
 {
 	reliable if (Role == ROLE_Authority && bNetInitial)
-		Corona;
+		Corona, Lensflare;
 }
 
 
@@ -157,7 +243,33 @@ simulated event C21FX_Node createNode(Actor actor)
 
 simulated event initializeNodesRender(RenderFrame frame)
 {
+	//local
+	local byte i;
+	
+	//canvas
 	frame.Canvas.Style = ERenderStyle.STY_Translucent;
+	
+	//lensflares
+	if (Lensflare.Kind > LK_None) {
+		for (i = 0; i < LENSFLARE_ENTRIES_COUNT; i++) {
+			//set
+			if (Lensflare.Kind == LK_Custom) {
+				LensflareEntries[i] = Lensflare.Custom[i];
+			} else {
+				LensflareEntries[i] = LensflarePresets[Lensflare.Kind - 1].Entries[i];
+			}
+			
+			//initialize
+			LensflareEntries[i].Glow = fclamp(LensflareEntries[i].Glow, 0.0, 1.0);
+			LensflareEntries[i].Position = fclamp(LensflareEntries[i].Position, 0.0, 1.0);
+			LensflareEntries[i].Size.Min = fmax(LensflareEntries[i].Size.Min, 0.0);
+			LensflareEntries[i].Size.Max = fmax(LensflareEntries[i].Size.Max, 0.0);
+			LensflareEntries[i].Degree.Min = fclamp(LensflareEntries[i].Degree.Min, 0.0, 1.0);
+			LensflareEntries[i].Degree.Max = fclamp(LensflareEntries[i].Degree.Max, 0.0, 1.0);
+			LensflareEntries[i].Degree.FadeMin = fclamp(LensflareEntries[i].Degree.FadeMin, 0.0, 1.0);
+			LensflareEntries[i].Degree.FadeMax = fclamp(LensflareEntries[i].Degree.FadeMax, 0.0, 1.0);
+		}
+	}
 }
 
 simulated event renderNode(C21FX_Node node, RenderFrame frame)
@@ -181,14 +293,16 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 {
 	//local
 	local bool visible;
-	local RenderPoint2D point;
-	local RenderScale2D scale;
+	local RenderPoint2D point, lPoint;
+	local RenderScale2D scale, lScale;
 	local ERenderPoint2DVisibility pointVisibility;
 	local ECoronaScaleMode scaleMode;
 	local ECoronaColorMode colorMode;
-	local float fscale, opacity, gsize;
-	local byte saturation;
-	local color color;
+	local float fscale, opacity, gSize, lDegree, lOpacity, lAlpha;
+	local byte saturation, i;
+	local color c, color, lColorMin, lColorMax;
+	local vector lVector, lVectorPoint;
+	local NodeLensflareEntry lEntry;
 	
 	//check
 	if (
@@ -256,22 +370,22 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	//gradient (size)
 	if (node.bLinked && Corona.Link.Gradient.Size.Mode > CLGM_None) {
 		if (Corona.Link.Gradient.Size.Mode == CLGM_NonLinear) {
-			gsize = smerp(node.Degree, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
+			gSize = smerp(node.Position, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
 		} else {
-			gsize = lerp(node.Degree, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
+			gSize = lerp(node.Position, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
 		}
-		scale.U *= gsize;
-		scale.V *= gsize;
+		scale.U *= gSize;
+		scale.V *= gSize;
 	}
 	
 	//gradient (scale)
 	if (node.bLinked && Corona.Link.Gradient.Scale.Mode > CLGM_None) {
 		if (Corona.Link.Gradient.Scale.Mode == CLGM_NonLinear) {
-			scale.U *= smerp(node.Degree, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
-			scale.V *= smerp(node.Degree, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
+			scale.U *= smerp(node.Position, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
+			scale.V *= smerp(node.Position, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
 		} else {
-			scale.U *= lerp(node.Degree, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
-			scale.V *= lerp(node.Degree, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
+			scale.U *= lerp(node.Position, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
+			scale.V *= lerp(node.Position, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
 		}
 	}
 	
@@ -286,9 +400,9 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	//gradient (glow)
 	if (node.bLinked && Corona.Link.Gradient.Glow.Mode > CLGM_None) {
 		if (Corona.Link.Gradient.Glow.Mode == CLGM_NonLinear) {
-			opacity *= smerp(node.Degree, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
+			opacity *= smerp(node.Position, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
 		} else {
-			opacity *= lerp(node.Degree, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
+			opacity *= lerp(node.Position, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
 		}
 	}
 	
@@ -312,23 +426,23 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		if (node.bLinked && Corona.Link.Gradient.Color.Mode > CLGM_None) {
 			if (Corona.Link.Gradient.Color.Mode == CLGM_NonLinear) {
 				color.R = byte(
-					smerp(node.Degree, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
+					smerp(node.Position, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
 				);
 				color.G = byte(
-					smerp(node.Degree, Corona.Link.Gradient.Color.Value1.G, Corona.Link.Gradient.Color.Value2.G)
+					smerp(node.Position, Corona.Link.Gradient.Color.Value1.G, Corona.Link.Gradient.Color.Value2.G)
 				);
 				color.B = byte(
-					smerp(node.Degree, Corona.Link.Gradient.Color.Value1.B, Corona.Link.Gradient.Color.Value2.B)
+					smerp(node.Position, Corona.Link.Gradient.Color.Value1.B, Corona.Link.Gradient.Color.Value2.B)
 				);
 			} else {
 				color.R = byte(
-					lerp(node.Degree, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
+					lerp(node.Position, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
 				);
 				color.G = byte(
-					lerp(node.Degree, Corona.Link.Gradient.Color.Value1.G, Corona.Link.Gradient.Color.Value2.G)
+					lerp(node.Position, Corona.Link.Gradient.Color.Value1.G, Corona.Link.Gradient.Color.Value2.G)
 				);
 				color.B = byte(
-					lerp(node.Degree, Corona.Link.Gradient.Color.Value1.B, Corona.Link.Gradient.Color.Value2.B)
+					lerp(node.Position, Corona.Link.Gradient.Color.Value1.B, Corona.Link.Gradient.Color.Value2.B)
 				);
 			}
 		} else {
@@ -343,11 +457,11 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 			if (node.bLinked && Corona.Link.Gradient.Saturation.Mode > CLGM_None) {
 				if (Corona.Link.Gradient.Saturation.Mode == CLGM_NonLinear) {
 					saturation = byte(smerp(
-						node.Degree, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
+						node.Position, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
 					));
 				} else {
 					saturation = byte(lerp(
-						node.Degree, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
+						node.Position, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
 					));
 				}
 			} else {
@@ -356,26 +470,152 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 			color = hsbToColor(node.Actor.LightHue, saturation, 255);
 		}
 	}
-	color.R = byte(float(color.R) * opacity);
-	color.G = byte(float(color.G) * opacity);
-	color.B = byte(float(color.B) * opacity);
+	c.R = byte(float(color.R) * opacity);
+	c.G = byte(float(color.G) * opacity);
+	c.B = byte(float(color.B) * opacity);
 	
 	//color (check)
-	if (color.R == 0 && color.G == 0 && color.B == 0) {
+	if (c.R == 0 && c.G == 0 && c.B == 0) {
 		return;
 	}
 	
 	//draw
-	frame.Canvas.DrawColor = color;
+	frame.Canvas.DrawColor = c;
 	setRenderFrameNearestZ(frame, node.Distance);
 	drawSprite(frame, Corona.Texture, point, scale, true, true);
+	
+	//lensflares
+	if (Lensflare.Kind > LK_None) {
+		//vector
+		lVector.X = lerp(0.5, frame.Canvas.OrgX, frame.Canvas.ClipX) - point.X;
+		lVector.Y = lerp(0.5, frame.Canvas.OrgY, frame.Canvas.ClipY) - point.Y;
+		lVector *= 2.0;
+		
+		//degree
+		lDegree = fmax(
+			abs(lVector.X / (frame.Canvas.ClipX - frame.Canvas.OrgX)),
+			abs(lVector.Y / (frame.Canvas.ClipY - frame.Canvas.OrgY))
+		);
+		
+		//entries
+		for (i = 0; i < LENSFLARE_ENTRIES_COUNT; i++) {
+			//entry
+			lEntry = LensflareEntries[i];
+			
+			//check
+			if (
+				lEntry.Glow <= 0.0 || lEntry.Texture == none || lDegree < lEntry.Degree.Min || 
+				lDegree > lEntry.Degree.Max
+			) {
+				continue;
+			}
+			
+			//opacity
+			lOpacity = opacity * lEntry.Glow;
+			if (lDegree < lEntry.Degree.FadeMin && lEntry.Degree.FadeMin > lEntry.Degree.Min) {
+				lOpacity *= (lDegree - lEntry.Degree.Min) / (lEntry.Degree.FadeMin - lEntry.Degree.Min);
+			} else if (lDegree > lEntry.Degree.FadeMax && lEntry.Degree.FadeMax < lEntry.Degree.Max) {
+				lOpacity *= 1.0 - (lDegree - lEntry.Degree.FadeMax) / (lEntry.Degree.Max - lEntry.Degree.FadeMax);
+			}
+			
+			//opacity (check)
+			if (lOpacity <= 0.0) {
+				continue;
+			}
+			
+			//alpha
+			lAlpha = (lDegree - lEntry.Degree.Min) / (lEntry.Degree.Max - lEntry.Degree.Min);
+			
+			//scale
+			fscale = lerp(lAlpha, lEntry.Size.Min, lEntry.Size.Max);
+			lScale.U = fscale * scale.U * lerp(lAlpha, lEntry.Scale.Min.U, lEntry.Scale.Max.U);
+			lScale.V = fscale * scale.U * lerp(lAlpha, lEntry.Scale.Min.V, lEntry.Scale.Max.V);
+			
+			//scale (check)
+			if (lScale.U <= 0.0 || lScale.V <= 0.0) {
+				continue;
+			}
+			
+			//color mode
+			if (lEntry.Color.Mode == LCM_Auto) {
+				
+				//TODO
+				
+			}
+			
+			//color
+			switch (lEntry.Color.Mode) {
+				case LCM_Value:
+					lColorMin = lEntry.Color.Min;
+					lColorMax = lEntry.Color.Max;
+					break;
+				case LCM_Add:
+					lColorMin.R = byte(min(int(color.R) + int(lEntry.Color.Min.R), 255));
+					lColorMin.G = byte(min(int(color.G) + int(lEntry.Color.Min.G), 255));
+					lColorMin.B = byte(min(int(color.B) + int(lEntry.Color.Min.B), 255));
+					lColorMax.R = byte(min(int(color.R) + int(lEntry.Color.Max.R), 255));
+					lColorMax.G = byte(min(int(color.G) + int(lEntry.Color.Max.G), 255));
+					lColorMax.B = byte(min(int(color.B) + int(lEntry.Color.Max.B), 255));
+					break;
+				case LCM_Subtract:
+					lColorMin.R = byte(max(int(color.R) - int(lEntry.Color.Min.R), 0));
+					lColorMin.G = byte(max(int(color.G) - int(lEntry.Color.Min.G), 0));
+					lColorMin.B = byte(max(int(color.B) - int(lEntry.Color.Min.B), 0));
+					lColorMax.R = byte(max(int(color.R) - int(lEntry.Color.Max.R), 0));
+					lColorMax.G = byte(max(int(color.G) - int(lEntry.Color.Max.G), 0));
+					lColorMax.B = byte(max(int(color.B) - int(lEntry.Color.Max.B), 0));
+					break;
+				case LCM_Intersect:
+					lColorMin.R = byte(int(color.R) & int(lEntry.Color.Min.R));
+					lColorMin.G = byte(int(color.G) & int(lEntry.Color.Min.G));
+					lColorMin.B = byte(int(color.B) & int(lEntry.Color.Min.B));
+					lColorMax.R = byte(int(color.R) & int(lEntry.Color.Max.R));
+					lColorMax.G = byte(int(color.G) & int(lEntry.Color.Max.G));
+					lColorMax.B = byte(int(color.B) & int(lEntry.Color.Max.B));
+					break;
+				case LCM_Merge:
+					lColorMin.R = byte(int(color.R) | int(lEntry.Color.Min.R));
+					lColorMin.G = byte(int(color.G) | int(lEntry.Color.Min.G));
+					lColorMin.B = byte(int(color.B) | int(lEntry.Color.Min.B));
+					lColorMax.R = byte(int(color.R) | int(lEntry.Color.Max.R));
+					lColorMax.G = byte(int(color.G) | int(lEntry.Color.Max.G));
+					lColorMax.B = byte(int(color.B) | int(lEntry.Color.Max.B));
+					break;
+				case LCM_Exclude:
+					lColorMin.R = byte(int(color.R) ^ int(lEntry.Color.Min.R));
+					lColorMin.G = byte(int(color.G) ^ int(lEntry.Color.Min.G));
+					lColorMin.B = byte(int(color.B) ^ int(lEntry.Color.Min.B));
+					lColorMax.R = byte(int(color.R) ^ int(lEntry.Color.Max.R));
+					lColorMax.G = byte(int(color.G) ^ int(lEntry.Color.Max.G));
+					lColorMax.B = byte(int(color.B) ^ int(lEntry.Color.Max.B));
+					break;
+			}
+			c.R = byte(lerp(lAlpha, lColorMin.R, lColorMax.R) * lOpacity);
+			c.G = byte(lerp(lAlpha, lColorMin.G, lColorMax.G) * lOpacity);
+			c.B = byte(lerp(lAlpha, lColorMin.B, lColorMax.B) * lOpacity);
+			
+			//color (check)
+			if (c.R == 0 && c.G == 0 && c.B == 0) {
+				return;
+			}
+			
+			//point
+			lVectorPoint = lVector * lEntry.Position;
+			lPoint.X = point.X + lVectorPoint.X;
+			lPoint.Y = point.Y + lVectorPoint.Y;
+			
+			//draw
+			frame.Canvas.DrawColor = c;
+			drawSprite(frame, lEntry.Texture, lPoint, lScale, true, true);
+		}
+	}
 }
 
 final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame frame)
 {
 	//local
 	local vector vector;
-	local float distance, fcount, degree, unit;
+	local float distance, fcount, position, unit;
 	local int count, i, imax;
 	local C21FX_CoronaNode node;
 	
@@ -424,21 +664,21 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 			}
 		}
 		
-		//degree
+		//position
 		unit = 1.0 / (fcount - 1.0);
 		if (Corona.Link.Alignment > CLA_Start) {
-			degree = 1.0 - unit * float(imax);
+			position = 1.0 - unit * float(imax);
 			if (Corona.Link.Alignment == CLA_Center || Corona.Link.Alignment == CLA_Middle) {
-				degree *= 0.5;
+				position *= 0.5;
 			}
 		}
 		
 		//locations
 		for (node = link.RootNode; node != none; node = C21FX_CoronaNode(node.NextNode)) {
 			//set
-			node.Location = link.Point1.Location + degree * vector;
-			node.Degree = degree;
-			degree = fmin(degree + unit, 1.0);
+			node.Location = link.Point1.Location + position * vector;
+			node.Position = position;
+			position = fmin(position + unit, 1.0);
 			
 			//finalize
 			if (node.bEnd) {
@@ -456,7 +696,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 defaultproperties
 {
 	//editables (controller)
-	Corona=(Texture=Texture'DefaultCorona',Size=1.0,Glow=1.0)
+	Corona=(Texture=Texture'Corona',Size=1.0,Glow=1.0)
 	Corona=(Scale=(Value=(U=1.0,V=1.0)))
 	Corona=(Color=(Value=(R=255,G=255,B=255)))
 	Corona=(Link=(Density=1.0,Alignment=CLA_Center))
