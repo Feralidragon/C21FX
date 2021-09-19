@@ -34,6 +34,7 @@ enum ECoronaScaleType
 enum ECoronaLinkAlignment
 {
 	CLA_Start,
+	CLA_Center,
 	CLA_Middle,
 	CLA_End
 };
@@ -121,7 +122,7 @@ var(Controller) NodeCorona Corona;
 
 replication
 {
-	reliable if (Role == ROLE_Authority)
+	reliable if (Role == ROLE_Authority && bNetInitial)
 		Corona;
 }
 
@@ -261,7 +262,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 {
 	//local
 	local vector vector;
-	local float distance, fcount, coeficient, degree;
+	local float distance, fcount, degree, unit;
 	local int count, i, imax;
 	local C21FX_CoronaNode node;
 	
@@ -273,44 +274,58 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 		return;
 	}
 	
+	//initialize
+	vector = link.Point2.Location - link.Point1.Location;
+	distance = vsize(vector);
+	fcount = distance / fmax(Corona.Texture.USize, Corona.Texture.VSize) * Corona.Link.Density;
+	count = int(fcount);
+	
+	//check (count)
+	if (count == 0) {
+		return;
+	}
+	
 	//nodes
 	if (
 		link.RootNode == none || link.Point1.Location != link.Point1.OldLocation || 
 		link.Point2.Location != link.Point2.OldLocation
 	) {
-		//initialize
-		vector = link.Point2.Location - link.Point1.Location;
-		distance = vsize(vector);
-		fcount = distance / fmax(Corona.Texture.USize, Corona.Texture.VSize) * Corona.Link.Density;
-		count = int(fcount);
-		
-		//nodes
+		//imax
 		imax = count - 1;
+		if (Corona.Link.Alignment == CLA_Middle && (imax % 2) == 0) {
+			if (imax == 0) {
+				return;
+			}
+			imax--;
+		}
+		
+		//setup
 		node = link.RootNode;
-		for (i = 0; i < count; i++) {
+		for (i = 0; i <= imax; i++) {
 			if (node == none) {
 				link.RootNode = C21FX_CoronaNode(generateNode(link.RootNode, link.Point1));
 			} else {
-				node.bEnd = i == imax || node.NextNode == none;
+				node.bEnd = (i == imax || node.NextNode == none);
 				node = C21FX_CoronaNode(node.NextNode);
 			}
 		}
 		
 		//degree
-		if (fcount >= 1.0) {
-			coeficient = 1.0 / (fcount - 1.0);
-			if (Corona.Link.Alignment == CLA_Middle || Corona.Link.Alignment == CLA_End) {
-				degree = 1.0 - coeficient * float(imax);
-				if (Corona.Link.Alignment == CLA_Middle) {
-					degree *= 0.5;
-				}
+		unit = 1.0 / (fcount - 1.0);
+		if (Corona.Link.Alignment > CLA_Start) {
+			degree = 1.0 - unit * float(imax);
+			if (Corona.Link.Alignment == CLA_Center || Corona.Link.Alignment == CLA_Middle) {
+				degree *= 0.5;
 			}
 		}
 		
 		//locations
 		for (node = link.RootNode; node != none; node = C21FX_CoronaNode(node.NextNode)) {
+			//set
 			node.Location = link.Point1.Location + degree * vector;
-			degree += coeficient;
+			degree += unit;
+			
+			//finalize
 			if (node.bEnd) {
 				break;
 			}
@@ -329,7 +344,7 @@ defaultproperties
 	Corona=(Texture=Texture'DefaultCorona',Size=1.0,Glow=1.0)
 	Corona=(Scale=(Value=(U=1.0,V=1.0)))
 	Corona=(Color=(Value=(R=255,G=255,B=255)))
-	Corona=(Link=(Density=1.0,Alignment=CLA_Middle))
+	Corona=(Link=(Density=1.0,Alignment=CLA_Center))
 	Corona=(Link=(Gradient=(Size=(Value1=1.0,Value2=1.0))))
 	Corona=(Link=(Gradient=(Glow=(Value1=1.0,Value2=1.0))))
 	Corona=(Link=(Gradient=(Scale=(Value1=(U=1.0,V=1.0),Value2=(U=1.0,V=1.0)))))
