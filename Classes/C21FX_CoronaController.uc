@@ -25,10 +25,11 @@ enum ECoronaColorMode
 	CCM_LightHue
 };
 
-enum ECoronaScaleType
+enum ECoronaScaleMode
 {
-	CST_Fixed,
-	CST_Perspective
+	CSM_Auto,
+	CSM_Fixed,
+	CSM_World
 };
 
 enum ECoronaLinkAlignment
@@ -39,11 +40,18 @@ enum ECoronaLinkAlignment
 	CLA_End
 };
 
+enum ECoronaLinkGradientMode
+{
+	CLGM_None,
+	CLGM_Linear,
+	CLGM_NonLinear
+};
+
 
 //Structures
 struct NodeCoronaScale
 {
-	var() ECoronaScaleType Type;
+	var() ECoronaScaleMode Mode;
 	var() RenderScale2D Value;
 };
 
@@ -55,35 +63,35 @@ struct NodeCoronaColor
 
 struct NodeCoronaLinkGradientSize
 {
-	var() bool bEnabled;
+	var() ECoronaLinkGradientMode Mode;
 	var() float Value1;
 	var() float Value2;
 };
 
 struct NodeCoronaLinkGradientGlow
 {
-	var() bool bEnabled;
+	var() ECoronaLinkGradientMode Mode;
 	var() float Value1;
 	var() float Value2;
 };
 
 struct NodeCoronaLinkGradientScale
 {
-	var() bool bEnabled;
+	var() ECoronaLinkGradientMode Mode;
 	var() RenderScale2D Value1;
 	var() RenderScale2D Value2;
 };
 
 struct NodeCoronaLinkGradientColor
 {
-	var() bool bEnabled;
+	var() ECoronaLinkGradientMode Mode;
 	var() color Value1;
 	var() color Value2;
 };
 
 struct NodeCoronaLinkGradientSaturation
 {
-	var() bool bEnabled;
+	var() ECoronaLinkGradientMode Mode;
 	var() byte Value1;
 	var() byte Value2;
 };
@@ -175,8 +183,10 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	local RenderPoint2D point;
 	local RenderScale2D scale;
 	local ERenderPoint2DVisibility pointVisibility;
+	local ECoronaScaleMode scaleMode;
 	local ECoronaColorMode colorMode;
-	local float fscale, opacity;
+	local float fscale, opacity, gsize;
+	local byte saturation;
 	local color color;
 	
 	//check
@@ -211,20 +221,61 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		}
 	}
 	
+	//scale mode
+	scaleMode = Corona.Scale.Mode;
+	if (scaleMode == CSM_Auto) {
+		if (node.bLinked) {
+			scaleMode = CSM_World;
+		} else {
+			scaleMode = CSM_Fixed;
+		}
+	}
+	
 	//scale
-	if (Corona.Scale.Type == CST_Fixed) {
+	if (scaleMode == CSM_Fixed) {
 		fscale = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
 			CORONA_FIXED_SCALE / float(max(Corona.Texture.USize, Corona.Texture.VSize));
 		scale.U = fscale;
 		scale.V = fscale;
-	} else if (Corona.Scale.Type == CST_Perspective) {
+	} else if (scaleMode == CSM_World) {
 		scale = locationToRenderScale2D(node.Location, frame);
 	}
 	scale.U *= Corona.Scale.Value.U * Corona.Size;
 	scale.V *= Corona.Scale.Value.V * Corona.Size;
 	
+	//gradient (size)
+	if (node.bLinked && Corona.Link.Gradient.Size.Mode > CLGM_None) {
+		if (Corona.Link.Gradient.Size.Mode == CLGM_NonLinear) {
+			gsize = smerp(node.Degree, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
+		} else {
+			gsize = lerp(node.Degree, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
+		}
+		scale.U *= gsize;
+		scale.V *= gsize;
+	}
+	
+	//gradient (scale)
+	if (node.bLinked && Corona.Link.Gradient.Scale.Mode > CLGM_None) {
+		if (Corona.Link.Gradient.Scale.Mode == CLGM_NonLinear) {
+			scale.U *= smerp(node.Degree, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
+			scale.V *= smerp(node.Degree, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
+		} else {
+			scale.U *= lerp(node.Degree, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
+			scale.V *= lerp(node.Degree, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
+		}
+	}
+	
 	//opacity
 	opacity = frame.Opacity * node.Opacity * Corona.Glow;
+	
+	//gradient (glow)
+	if (node.bLinked && Corona.Link.Gradient.Glow.Mode > CLGM_None) {
+		if (Corona.Link.Gradient.Glow.Mode == CLGM_NonLinear) {
+			opacity *= smerp(node.Degree, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
+		} else {
+			opacity *= lerp(node.Degree, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
+		}
+	}
 	
 	//color mode
 	colorMode = Corona.Color.Mode;
@@ -238,14 +289,51 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	
 	//color
 	if (colorMode == CCM_Value) {
-		color = Corona.Color.Value;
+		if (node.bLinked && Corona.Link.Gradient.Color.Mode > CLGM_None) {
+			if (Corona.Link.Gradient.Color.Mode == CLGM_NonLinear) {
+				color.R = byte(
+					smerp(node.Degree, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
+				);
+				color.G = byte(
+					smerp(node.Degree, Corona.Link.Gradient.Color.Value1.G, Corona.Link.Gradient.Color.Value2.G)
+				);
+				color.B = byte(
+					smerp(node.Degree, Corona.Link.Gradient.Color.Value1.B, Corona.Link.Gradient.Color.Value2.B)
+				);
+			} else {
+				color.R = byte(
+					lerp(node.Degree, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
+				);
+				color.G = byte(
+					lerp(node.Degree, Corona.Link.Gradient.Color.Value1.G, Corona.Link.Gradient.Color.Value2.G)
+				);
+				color.B = byte(
+					lerp(node.Degree, Corona.Link.Gradient.Color.Value1.B, Corona.Link.Gradient.Color.Value2.B)
+				);
+			}
+		} else {
+			color = Corona.Color.Value;
+		}
 	} else if (node.Actor != none) {
 		if (colorMode == CCM_Light) {
 			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, node.Actor.LightBrightness);
 		} else if (colorMode == CCM_LightHS) {
 			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, 255);
 		} else if (colorMode == CCM_LightHue) {
-			color = hsbToColor(node.Actor.LightHue, Corona.Saturation, 255);
+			if (node.bLinked && Corona.Link.Gradient.Saturation.Mode > CLGM_None) {
+				if (Corona.Link.Gradient.Saturation.Mode == CLGM_NonLinear) {
+					saturation = byte(smerp(
+						node.Degree, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
+					));
+				} else {
+					saturation = byte(lerp(
+						node.Degree, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
+					));
+				}
+			} else {
+				saturation = Corona.Saturation;
+			}
+			color = hsbToColor(node.Actor.LightHue, saturation, 255);
 		}
 	}
 	color.R = byte(float(color.R) * opacity);
@@ -304,6 +392,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 		for (i = 0; i <= imax; i++) {
 			if (node == none) {
 				link.RootNode = C21FX_CoronaNode(generateNode(link.RootNode, link.Point1));
+				link.RootNode.bLinked = true;
 			} else {
 				node.bEnd = (i == imax || node.NextNode == none);
 				node = C21FX_CoronaNode(node.NextNode);
@@ -323,7 +412,8 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 		for (node = link.RootNode; node != none; node = C21FX_CoronaNode(node.NextNode)) {
 			//set
 			node.Location = link.Point1.Location + degree * vector;
-			degree += unit;
+			node.Degree = degree;
+			degree = fmin(degree + unit, 1.0);
 			
 			//finalize
 			if (node.bEnd) {

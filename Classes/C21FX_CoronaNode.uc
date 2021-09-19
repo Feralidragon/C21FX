@@ -8,3 +8,5 @@ class C21FX_CoronaNode extends C21FX_Node nousercreate;
 
 //Properties
 var float Opacity;
+var float Degree;
+var bool bLinked;
