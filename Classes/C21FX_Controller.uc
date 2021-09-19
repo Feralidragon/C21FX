@@ -152,6 +152,11 @@ final simulated function drawNodes(C21FX_Node rootNode, RenderFrame frame)
 		
 		//render
 		renderNode(node, frame);
+		
+		//finalize
+		if (node.bEnd) {
+			break;
+		}
 	}
 	
 	//finalize
@@ -211,21 +216,21 @@ final simulated function initializeNodes()
 				}
 				
 				//node
-				generateNode(rootNode, actor);
+				rootNode = generateNode(rootNode, actor);
 			}
 		}
 		initializedNodes = true;
 	}
 }
 
-final simulated function generateNode(out C21FX_Node rootNode, Actor actor)
+final simulated function C21FX_Node generateNode(C21FX_Node rootNode, Actor actor)
 {
 	//local
 	local C21FX_Node node;
 	
 	//check
 	if (actor == none) {
-		return;
+		return none;
 	}
 	
 	//node
@@ -236,7 +241,9 @@ final simulated function generateNode(out C21FX_Node rootNode, Actor actor)
 	node.Actor = actor;
 	node.Location = actor.Location;
 	node.NextNode = rootNode;
-	rootNode = node;
+	
+	//return
+	return node;
 }
 
 final simulated function initializeLinks(C21FX_Point point)

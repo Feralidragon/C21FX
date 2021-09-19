@@ -11,3 +11,4 @@ var Actor Actor;
 var vector Location;
 var float Distance;
 var C21FX_Node NextNode;
+var bool bEnd;
