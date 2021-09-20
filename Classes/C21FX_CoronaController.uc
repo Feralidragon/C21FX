@@ -659,7 +659,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 				link.RootNode = C21FX_CoronaNode(generateNode(link.RootNode, link.Point1));
 				link.RootNode.bLinked = true;
 			} else {
-				node.bEnd = (i == imax || node.NextNode == none);
+				node.bEnd = i == imax || node.NextNode == none;
 				node = C21FX_CoronaNode(node.NextNode);
 			}
 		}
@@ -676,8 +676,8 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 		//locations
 		for (node = link.RootNode; node != none; node = C21FX_CoronaNode(node.NextNode)) {
 			//set
-			node.Location = link.Point1.Location + position * vector;
 			node.Position = position;
+			node.Location = link.Point1.Location + position * vector;
 			position = fmin(position + unit, 1.0);
 			
 			//finalize

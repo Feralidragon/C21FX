@@ -90,7 +90,7 @@ final static function RenderPoint2D locationToRenderPoint2D(
 	
 	//calculate
 	direction = normal(location - frame.View.Location);
-	tanFovX = tan(frame.Canvas.ViewPort.Actor.FOVAngle * PI / 360);
+	tanFovX = tan(frame.Canvas.ViewPort.Actor.FOVAngle * PI / 360.0);
 	tanFovY = (frame.Canvas.ClipY / frame.Canvas.ClipX) * tanFovX;
 	getAxes(frame.View.Rotation, axisX, axisY, axisZ);
 	axisX *= direction dot axisX;

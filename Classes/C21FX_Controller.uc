@@ -79,9 +79,6 @@ event postBeginPlay()
 	local C21FX_Manager manager;
 	local Actor actor;
 	
-	//initialize
-	Visibility.TransparencyTag = caps(Visibility.TransparencyTag);
-	
 	//manager (check)
 	foreach AllActors(class'C21FX_Manager', manager) {
 		hasManager = true;
@@ -101,6 +98,9 @@ event postBeginPlay()
 			}
 		}
 	}
+	
+	//transparency
+	Visibility.TransparencyTag = caps(Visibility.TransparencyTag);
 	
 	//initialize
 	initialize();
