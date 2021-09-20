@@ -9,13 +9,16 @@ class C21FX_CoronaController extends C21FX_Controller;
 //Import directives (textures - coronas)
 #exec TEXTURE IMPORT NAME=Corona FILE=Textures/Coronas/Corona.bmp GROUP=Coronas MIPS=OFF LODSET=0
 
-//Import directives (textures - lensflares)
-#exec TEXTURE IMPORT NAME=Lensflare0 FILE=Textures/Lensflares/Lensflare0.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare1 FILE=Textures/Lensflares/Lensflare1.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare2 FILE=Textures/Lensflares/Lensflare2.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare3 FILE=Textures/Lensflares/Lensflare3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare4 FILE=Textures/Lensflares/Lensflare4.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare5 FILE=Textures/Lensflares/Lensflare5.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+//Import directives (textures - lensflares SD)
+#exec TEXTURE IMPORT NAME=Lensflare0 FILE=Textures/Lensflares/SD/Lensflare0.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare1 FILE=Textures/Lensflares/SD/Lensflare1.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare2 FILE=Textures/Lensflares/SD/Lensflare2.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare3 FILE=Textures/Lensflares/SD/Lensflare3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare4 FILE=Textures/Lensflares/SD/Lensflare4.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare5 FILE=Textures/Lensflares/SD/Lensflare5.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+
+//Import directives (textures - lensflares HD)
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare3 FILE=Textures/Lensflares/HD/Lensflare3.png GROUP=Lensflares MIPS=OFF LODSET=0
 
 
 //Constants
