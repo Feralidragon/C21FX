@@ -224,7 +224,7 @@ struct NodeLensflareEntry
 struct NodeLensflare
 {
 	var() ELensflareKind Kind;
-	var() NodeLensflareEntry Custom[8];
+	var() NodeLensflareEntry Custom[LENSFLARE_ENTRIES_COUNT];
 };
 
 struct NodeLensflarePreset
