@@ -14,11 +14,13 @@ class C21FX_CoronaController extends C21FX_Controller;
 #exec TEXTURE IMPORT NAME=Lensflare1 FILE=Textures/Lensflares/SD/Lensflare1.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 #exec TEXTURE IMPORT NAME=Lensflare2 FILE=Textures/Lensflares/SD/Lensflare2.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 #exec TEXTURE IMPORT NAME=Lensflare3 FILE=Textures/Lensflares/SD/Lensflare3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=LensflareQ3 FILE=Textures/Lensflares/SD/LensflareQ3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 #exec TEXTURE IMPORT NAME=Lensflare4 FILE=Textures/Lensflares/SD/Lensflare4.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 #exec TEXTURE IMPORT NAME=Lensflare5 FILE=Textures/Lensflares/SD/Lensflare5.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 
 //Import directives (textures - lensflares HD)
 #exec TEXTURE MERGECOMPRESSED NAME=Lensflare3 FILE=Textures/Lensflares/HD/Lensflare3.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=LensflareQ3 FILE=Textures/Lensflares/HD/LensflareQ3.png GROUP=Lensflares MIPS=OFF LODSET=0
 
 
 //Constants
@@ -84,6 +86,12 @@ enum ELensflareColorMode
 
 
 //Structures
+struct NodeCoronaTexture
+{
+	var() ERenderTextureMode Mode;
+	var() Texture Value;
+};
+
 struct NodeCoronaScale
 {
 	var() ECoronaScaleMode Mode;
@@ -149,13 +157,19 @@ struct NodeCoronaLink
 
 struct NodeCorona
 {
-	var() Texture Texture;
+	var() NodeCoronaTexture Texture;
 	var() float Size;
 	var() float Glow;
 	var() NodeCoronaScale Scale;
 	var() NodeCoronaColor Color;
 	var() byte Saturation;
 	var() NodeCoronaLink Link;
+};
+
+struct NodeLensflareTexture
+{
+	var() ERenderTextureMode Mode;
+	var() Texture Value;
 };
 
 struct NodeLensflareColor
@@ -189,7 +203,7 @@ struct NodeLensflareEntry
 {
 	var() float Glow;
 	var() float Position;
-	var() Texture Texture;
+	var() NodeLensflareTexture Texture;
 	var() NodeLensflareColor Color;
 	var() NodeLensflareSize Size;
 	var() NodeLensflareScale Scale;
@@ -264,7 +278,7 @@ simulated event initializeNodesRender(RenderFrame frame)
 			
 			//initialize
 			LensflareEntries[i].Glow = fclamp(LensflareEntries[i].Glow, 0.0, 1.0);
-			LensflareEntries[i].Position = fclamp(LensflareEntries[i].Position, 0.0, 1.0);
+			LensflareEntries[i].Position = fclamp(LensflareEntries[i].Position, -1.0, 1.0);
 			LensflareEntries[i].Size.Min = fmax(LensflareEntries[i].Size.Min, 0.0);
 			LensflareEntries[i].Size.Max = fmax(LensflareEntries[i].Size.Max, 0.0);
 			LensflareEntries[i].Degree.Min = fclamp(LensflareEntries[i].Degree.Min, 0.0, 1.0);
@@ -309,7 +323,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	
 	//check
 	if (
-		node == none || Corona.Texture == none || Corona.Size <= 0.0 || Corona.Scale.Value.U <= 0.0 || 
+		node == none || Corona.Texture.Value == none || Corona.Size <= 0.0 || Corona.Scale.Value.U <= 0.0 || 
 		Corona.Scale.Value.V <= 0.0 || Corona.Glow <= 0.0
 	) {
 		return;
@@ -353,7 +367,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	if (scaleMode == CSM_Fixed || scaleMode == CSM_Distance) {
 		//scale
 		fscale = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
-			CORONA_SCALE_FIXED / float(max(Corona.Texture.USize, Corona.Texture.VSize));
+			CORONA_SCALE_FIXED / float(max(Corona.Texture.Value.USize, Corona.Texture.Value.VSize));
 		
 		//distance
 		if (scaleMode == CSM_Distance && Visibility.ViewDistance > 0.0) {
@@ -485,7 +499,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	//draw
 	frame.Canvas.DrawColor = c;
 	setRenderFrameNearestZ(frame, node.Distance);
-	drawSprite(frame, Corona.Texture, point, scale, true, true);
+	drawSprite(frame, Corona.Texture.Value, point, scale, true, true, Corona.Texture.Mode);
 	
 	//lensflares
 	if (Lensflare.Kind > LK_None) {
@@ -507,7 +521,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 			
 			//check
 			if (
-				lEntry.Glow <= 0.0 || lEntry.Texture == none || lDegree < lEntry.Degree.Min || 
+				lEntry.Glow <= 0.0 || lEntry.Texture.Value == none || lDegree < lEntry.Degree.Min || 
 				lDegree > lEntry.Degree.Max
 			) {
 				continue;
@@ -609,7 +623,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 			
 			//draw
 			frame.Canvas.DrawColor = c;
-			drawSprite(frame, lEntry.Texture, lPoint, lScale, true, true);
+			drawSprite(frame, lEntry.Texture.Value, lPoint, lScale, true, true, lEntry.Texture.Mode);
 		}
 	}
 }
@@ -624,7 +638,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 	
 	//check
 	if (
-		link == none || link.Point1 == none || link.Point2 == none || Corona.Texture == none || 
+		link == none || link.Point1 == none || link.Point2 == none || Corona.Texture.Value == none || 
 		Corona.Link.Density <= 0.0
 	) {
 		return;
@@ -633,7 +647,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 	//initialize
 	vector = link.Point2.Location - link.Point1.Location;
 	distance = vsize(vector);
-	fcount = distance / fmax(Corona.Texture.USize, Corona.Texture.VSize) * Corona.Link.Density;
+	fcount = distance / fmax(Corona.Texture.Value.USize, Corona.Texture.Value.VSize) * Corona.Link.Density;
 	count = int(fcount);
 	
 	//check (count)
@@ -699,7 +713,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 defaultproperties
 {
 	//editables (controller)
-	Corona=(Texture=Texture'Corona',Size=1.0,Glow=1.0)
+	Corona=(Texture=(Value=Texture'Corona'),Size=1.0,Glow=1.0)
 	Corona=(Scale=(Value=(U=1.0,V=1.0)))
 	Corona=(Color=(Value=(R=255,G=255,B=255)))
 	Corona=(Link=(Density=1.0,Alignment=CLA_Center))

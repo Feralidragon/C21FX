@@ -19,6 +19,14 @@ enum ERenderPoint2DVisibility
 	RP2DV_Visible
 };
 
+enum ERenderTextureMode
+{
+	RTM_Single,
+	RTM_DoubleU,
+	RTM_DoubleV,
+	RTM_Quadruple
+};
+
 
 //Structures
 struct RenderPoint2D
@@ -210,10 +218,10 @@ final static function color hsbToColor(byte hue, byte saturation, byte brightnes
 
 final static function drawSprite(
 	RenderFrame frame, Texture texture, RenderPoint2D point, RenderScale2D scale, optional bool bCenterX,
-	optional bool bCenterY
+	optional bool bCenterY, optional ERenderTextureMode mode
 ) {
 	//local
-	local float x, y, u, v;
+	local float u, v, x, y;
 	
 	//check
 	if (texture == none) {
@@ -227,16 +235,46 @@ final static function drawSprite(
 	//xy
 	x = point.X;
 	y = point.Y;
+	
+	//center X
 	if (bCenterX) {
-		x -= u * 0.5;
-	}
-	if (bCenterY) {
-		y -= v * 0.5;
+		if (mode == RTM_Single || mode == RTM_DoubleV) {
+			x -= u * 0.5;
+		} else {
+			x -= u;
+		}
 	}
 	
-	//render
+	//center Y
+	if (bCenterY) {
+		if (mode == RTM_Single || mode == RTM_DoubleU) {
+			y -= v * 0.5;
+		} else {
+			y -= v;
+		}
+	}
+	
+	//normalize
+	u = int(u);
+	v = int(v);
+	x = int(x);
+	y = int(y);
+	
+	//draw
 	frame.Canvas.setPos(x, y);
-	frame.Canvas.drawRect(texture, u, v);
+	frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, texture.VSize);
+	if (mode == RTM_DoubleU || mode == RTM_Quadruple) {
+		frame.Canvas.setPos(x + u, y);
+		frame.Canvas.drawTile(texture, u, v, 0, 0, -texture.USize, texture.VSize);
+	}
+	if (mode == RTM_DoubleV || mode == RTM_Quadruple) {
+		frame.Canvas.setPos(x, y + v);
+		frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, -texture.VSize);
+	}
+	if (mode == RTM_Quadruple) {
+		frame.Canvas.setPos(x + u, y + v);
+		frame.Canvas.drawTile(texture, u, v, 0, 0, -texture.USize, -texture.VSize);
+	}
 }
 
 
