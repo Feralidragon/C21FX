@@ -10,17 +10,26 @@ class C21FX_CoronaController extends C21FX_Controller;
 #exec TEXTURE IMPORT NAME=Corona FILE=Textures/Coronas/Corona.bmp GROUP=Coronas MIPS=OFF LODSET=0
 
 //Import directives (textures - lensflares SD)
-#exec TEXTURE IMPORT NAME=Lensflare0 FILE=Textures/Lensflares/SD/Lensflare0.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare1 FILE=Textures/Lensflares/SD/Lensflare1.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare2 FILE=Textures/Lensflares/SD/Lensflare2.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare3 FILE=Textures/Lensflares/SD/Lensflare3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=LensflareQ3 FILE=Textures/Lensflares/SD/LensflareQ3.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare4 FILE=Textures/Lensflares/SD/Lensflare4.bmp GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=Lensflare5 FILE=Textures/Lensflares/SD/Lensflare5.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare0Q FILE=Textures/Lensflares/SD/Lensflare0Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare1Q FILE=Textures/Lensflares/SD/Lensflare1Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare2Q FILE=Textures/Lensflares/SD/Lensflare2Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare3Q FILE=Textures/Lensflares/SD/Lensflare3Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare4Q FILE=Textures/Lensflares/SD/Lensflare4Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare5Q FILE=Textures/Lensflares/SD/Lensflare5Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare6D FILE=Textures/Lensflares/SD/Lensflare6D.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare7D FILE=Textures/Lensflares/SD/Lensflare7D.bmp GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=Lensflare8Q FILE=Textures/Lensflares/SD/Lensflare8Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 
 //Import directives (textures - lensflares HD)
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare3 FILE=Textures/Lensflares/HD/Lensflare3.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=LensflareQ3 FILE=Textures/Lensflares/HD/LensflareQ3.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare0Q FILE=Textures/Lensflares/HD/Lensflare0Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare1Q FILE=Textures/Lensflares/HD/Lensflare1Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare2Q FILE=Textures/Lensflares/HD/Lensflare2Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare3Q FILE=Textures/Lensflares/HD/Lensflare3Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare4Q FILE=Textures/Lensflares/HD/Lensflare4Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare5Q FILE=Textures/Lensflares/HD/Lensflare5Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare6D FILE=Textures/Lensflares/HD/Lensflare6D.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare7D FILE=Textures/Lensflares/HD/Lensflare7D.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare8Q FILE=Textures/Lensflares/HD/Lensflare8Q.png GROUP=Lensflares MIPS=OFF LODSET=0
 
 
 //Constants
@@ -75,7 +84,7 @@ enum ELensflareKind
 
 enum ELensflareColorMode
 {
-	LCM_Auto,
+	LCM_Same,
 	LCM_Value,
 	LCM_Add,
 	LCM_Subtract,
@@ -88,6 +97,7 @@ enum ELensflareColorMode
 //Structures
 struct NodeCoronaTexture
 {
+	var() bool bSmooth;
 	var() ERenderTextureMode Mode;
 	var() Texture Value;
 };
@@ -168,6 +178,7 @@ struct NodeCorona
 
 struct NodeLensflareTexture
 {
+	var() bool bSmooth;
 	var() ERenderTextureMode Mode;
 	var() Texture Value;
 };
@@ -213,12 +224,21 @@ struct NodeLensflareEntry
 struct NodeLensflare
 {
 	var() ELensflareKind Kind;
-	var() NodeLensflareEntry Custom[LENSFLARE_ENTRIES_COUNT];
+	var() NodeLensflareEntry Custom[8];
 };
 
 struct NodeLensflarePreset
 {
 	var NodeLensflareEntry Entries[LENSFLARE_ENTRIES_COUNT];
+};
+
+struct NodeLensflareCorona
+{
+	var color Color;
+	var float Opacity;
+	var float Distance;
+	var RenderPoint2D Point;
+	var RenderScale2D Scale;
 };
 
 
@@ -310,16 +330,15 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 {
 	//local
 	local bool visible;
-	local RenderPoint2D point, lPoint;
-	local RenderScale2D scale, lScale;
+	local RenderPoint2D point;
+	local RenderScale2D scale;
 	local ERenderPoint2DVisibility pointVisibility;
 	local ECoronaScaleMode scaleMode;
 	local ECoronaColorMode colorMode;
-	local float fscale, opacity, gSize, lDegree, lOpacity, lAlpha;
-	local byte saturation, i;
-	local color c, color, lColorMin, lColorMax;
-	local vector lVector, lVectorPoint;
-	local NodeLensflareEntry lEntry;
+	local float fscale, opacity, gSize;
+	local byte saturation;
+	local color c, color;
+	local NodeLensflareCorona lCorona;
 	
 	//check
 	if (
@@ -498,133 +517,159 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	
 	//draw
 	frame.Canvas.DrawColor = c;
+	frame.Canvas.bNoSmooth = !Corona.Texture.bSmooth;
 	setRenderFrameNearestZ(frame, node.Distance);
 	drawSprite(frame, Corona.Texture.Value, point, scale, true, true, Corona.Texture.Mode);
 	
 	//lensflares
 	if (Lensflare.Kind > LK_None) {
-		//vector
-		lVector.X = lerp(0.5, frame.Canvas.OrgX, frame.Canvas.ClipX) - point.X;
-		lVector.Y = lerp(0.5, frame.Canvas.OrgY, frame.Canvas.ClipY) - point.Y;
-		lVector *= 2.0;
+		lCorona.Color = color;
+		lCorona.Opacity = opacity;
+		lCorona.Distance = node.Distance;
+		lCorona.Point = point;
+		lCorona.Scale = scale;
+		drawLensflares(lCorona, frame);
+	}
+}
+
+final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame frame)
+{
+	//local
+	local byte i;
+	local RenderPoint2D point;
+	local RenderScale2D scale;
+	local float degree, opacity, alpha, fscale;
+	local color colorMin, colorMax, c;
+	local vector vector, pointVector;
+	local NodeLensflareEntry entry;
+	
+	//check
+	if (Lensflare.Kind == LK_None) {
+		return;
+	}
+	
+	//vector
+	vector.X = lerp(0.5, frame.Canvas.OrgX, frame.Canvas.ClipX) - corona.Point.X;
+	vector.Y = lerp(0.5, frame.Canvas.OrgY, frame.Canvas.ClipY) - corona.Point.Y;
+	vector *= 2.0;
+	
+	//degree
+	degree = fmax(
+		abs(vector.X / (frame.Canvas.ClipX - frame.Canvas.OrgX)),
+		abs(vector.Y / (frame.Canvas.ClipY - frame.Canvas.OrgY))
+	);
+	
+	//z
+	setRenderFrameNearestZ(frame, corona.Distance);
+	
+	//entries
+	for (i = 0; i < LENSFLARE_ENTRIES_COUNT; i++) {
+		//entry
+		entry = LensflareEntries[i];
 		
-		//degree
-		lDegree = fmax(
-			abs(lVector.X / (frame.Canvas.ClipX - frame.Canvas.OrgX)),
-			abs(lVector.Y / (frame.Canvas.ClipY - frame.Canvas.OrgY))
-		);
-		
-		//entries
-		for (i = 0; i < LENSFLARE_ENTRIES_COUNT; i++) {
-			//entry
-			lEntry = LensflareEntries[i];
-			
-			//check
-			if (
-				lEntry.Glow <= 0.0 || lEntry.Texture.Value == none || lDegree < lEntry.Degree.Min || 
-				lDegree > lEntry.Degree.Max
-			) {
-				continue;
-			}
-			
-			//opacity
-			lOpacity = opacity * lEntry.Glow;
-			if (lDegree < lEntry.Degree.FadeMin && lEntry.Degree.FadeMin > lEntry.Degree.Min) {
-				lOpacity *= (lDegree - lEntry.Degree.Min) / (lEntry.Degree.FadeMin - lEntry.Degree.Min);
-			} else if (lDegree > lEntry.Degree.FadeMax && lEntry.Degree.FadeMax < lEntry.Degree.Max) {
-				lOpacity *= 1.0 - (lDegree - lEntry.Degree.FadeMax) / (lEntry.Degree.Max - lEntry.Degree.FadeMax);
-			}
-			
-			//opacity (check)
-			if (lOpacity <= 0.0) {
-				continue;
-			}
-			
-			//alpha
-			lAlpha = (lDegree - lEntry.Degree.Min) / (lEntry.Degree.Max - lEntry.Degree.Min);
-			
-			//scale
-			fscale = lerp(lAlpha, lEntry.Size.Min, lEntry.Size.Max);
-			lScale.U = fscale * scale.U * lerp(lAlpha, lEntry.Scale.Min.U, lEntry.Scale.Max.U);
-			lScale.V = fscale * scale.U * lerp(lAlpha, lEntry.Scale.Min.V, lEntry.Scale.Max.V);
-			
-			//scale (check)
-			if (lScale.U <= 0.0 || lScale.V <= 0.0) {
-				continue;
-			}
-			
-			//color mode
-			if (lEntry.Color.Mode == LCM_Auto) {
-				
-				//TODO
-				
-			}
-			
-			//color
-			switch (lEntry.Color.Mode) {
-				case LCM_Value:
-					lColorMin = lEntry.Color.Min;
-					lColorMax = lEntry.Color.Max;
-					break;
-				case LCM_Add:
-					lColorMin.R = byte(min(int(color.R) + int(lEntry.Color.Min.R), 255));
-					lColorMin.G = byte(min(int(color.G) + int(lEntry.Color.Min.G), 255));
-					lColorMin.B = byte(min(int(color.B) + int(lEntry.Color.Min.B), 255));
-					lColorMax.R = byte(min(int(color.R) + int(lEntry.Color.Max.R), 255));
-					lColorMax.G = byte(min(int(color.G) + int(lEntry.Color.Max.G), 255));
-					lColorMax.B = byte(min(int(color.B) + int(lEntry.Color.Max.B), 255));
-					break;
-				case LCM_Subtract:
-					lColorMin.R = byte(max(int(color.R) - int(lEntry.Color.Min.R), 0));
-					lColorMin.G = byte(max(int(color.G) - int(lEntry.Color.Min.G), 0));
-					lColorMin.B = byte(max(int(color.B) - int(lEntry.Color.Min.B), 0));
-					lColorMax.R = byte(max(int(color.R) - int(lEntry.Color.Max.R), 0));
-					lColorMax.G = byte(max(int(color.G) - int(lEntry.Color.Max.G), 0));
-					lColorMax.B = byte(max(int(color.B) - int(lEntry.Color.Max.B), 0));
-					break;
-				case LCM_Intersect:
-					lColorMin.R = byte(int(color.R) & int(lEntry.Color.Min.R));
-					lColorMin.G = byte(int(color.G) & int(lEntry.Color.Min.G));
-					lColorMin.B = byte(int(color.B) & int(lEntry.Color.Min.B));
-					lColorMax.R = byte(int(color.R) & int(lEntry.Color.Max.R));
-					lColorMax.G = byte(int(color.G) & int(lEntry.Color.Max.G));
-					lColorMax.B = byte(int(color.B) & int(lEntry.Color.Max.B));
-					break;
-				case LCM_Merge:
-					lColorMin.R = byte(int(color.R) | int(lEntry.Color.Min.R));
-					lColorMin.G = byte(int(color.G) | int(lEntry.Color.Min.G));
-					lColorMin.B = byte(int(color.B) | int(lEntry.Color.Min.B));
-					lColorMax.R = byte(int(color.R) | int(lEntry.Color.Max.R));
-					lColorMax.G = byte(int(color.G) | int(lEntry.Color.Max.G));
-					lColorMax.B = byte(int(color.B) | int(lEntry.Color.Max.B));
-					break;
-				case LCM_Exclude:
-					lColorMin.R = byte(int(color.R) ^ int(lEntry.Color.Min.R));
-					lColorMin.G = byte(int(color.G) ^ int(lEntry.Color.Min.G));
-					lColorMin.B = byte(int(color.B) ^ int(lEntry.Color.Min.B));
-					lColorMax.R = byte(int(color.R) ^ int(lEntry.Color.Max.R));
-					lColorMax.G = byte(int(color.G) ^ int(lEntry.Color.Max.G));
-					lColorMax.B = byte(int(color.B) ^ int(lEntry.Color.Max.B));
-					break;
-			}
-			c.R = byte(lerp(lAlpha, lColorMin.R, lColorMax.R) * lOpacity);
-			c.G = byte(lerp(lAlpha, lColorMin.G, lColorMax.G) * lOpacity);
-			c.B = byte(lerp(lAlpha, lColorMin.B, lColorMax.B) * lOpacity);
-			
-			//color (check)
-			if (c.R == 0 && c.G == 0 && c.B == 0) {
-				return;
-			}
-			
-			//point
-			lVectorPoint = lVector * lEntry.Position;
-			lPoint.X = point.X + lVectorPoint.X;
-			lPoint.Y = point.Y + lVectorPoint.Y;
-			
-			//draw
-			frame.Canvas.DrawColor = c;
-			drawSprite(frame, lEntry.Texture.Value, lPoint, lScale, true, true, lEntry.Texture.Mode);
+		//check
+		if (
+			entry.Glow <= 0.0 || entry.Texture.Value == none || degree < entry.Degree.Min || 
+			degree > entry.Degree.Max
+		) {
+			continue;
 		}
+		
+		//opacity
+		opacity = corona.Opacity * entry.Glow;
+		if (degree < entry.Degree.FadeMin && entry.Degree.FadeMin > entry.Degree.Min) {
+			opacity *= (degree - entry.Degree.Min) / (entry.Degree.FadeMin - entry.Degree.Min);
+		} else if (degree > entry.Degree.FadeMax && entry.Degree.FadeMax < entry.Degree.Max) {
+			opacity *= 1.0 - (degree - entry.Degree.FadeMax) / (entry.Degree.Max - entry.Degree.FadeMax);
+		}
+		
+		//opacity (check)
+		if (opacity <= 0.0) {
+			continue;
+		}
+		
+		//alpha
+		alpha = (degree - entry.Degree.Min) / (entry.Degree.Max - entry.Degree.Min);
+		
+		//scale
+		fscale = lerp(alpha, entry.Size.Min, entry.Size.Max);
+		scale.U = fscale * corona.Scale.U * lerp(alpha, entry.Scale.Min.U, entry.Scale.Max.U);
+		scale.V = fscale * corona.Scale.V * lerp(alpha, entry.Scale.Min.V, entry.Scale.Max.V);
+		
+		//scale (check)
+		if (scale.U <= 0.0 || scale.V <= 0.0) {
+			continue;
+		}
+		
+		//color
+		switch (entry.Color.Mode) {
+			case LCM_Same:
+				colorMin = corona.Color;
+				colorMax = corona.Color;
+				break;
+			case LCM_Value:
+				colorMin = entry.Color.Min;
+				colorMax = entry.Color.Max;
+				break;
+			case LCM_Add:
+				colorMin.R = byte(min(int(corona.Color.R) + int(entry.Color.Min.R), 255));
+				colorMin.G = byte(min(int(corona.Color.G) + int(entry.Color.Min.G), 255));
+				colorMin.B = byte(min(int(corona.Color.B) + int(entry.Color.Min.B), 255));
+				colorMax.R = byte(min(int(corona.Color.R) + int(entry.Color.Max.R), 255));
+				colorMax.G = byte(min(int(corona.Color.G) + int(entry.Color.Max.G), 255));
+				colorMax.B = byte(min(int(corona.Color.B) + int(entry.Color.Max.B), 255));
+				break;
+			case LCM_Subtract:
+				colorMin.R = byte(max(int(corona.Color.R) - int(entry.Color.Min.R), 0));
+				colorMin.G = byte(max(int(corona.Color.G) - int(entry.Color.Min.G), 0));
+				colorMin.B = byte(max(int(corona.Color.B) - int(entry.Color.Min.B), 0));
+				colorMax.R = byte(max(int(corona.Color.R) - int(entry.Color.Max.R), 0));
+				colorMax.G = byte(max(int(corona.Color.G) - int(entry.Color.Max.G), 0));
+				colorMax.B = byte(max(int(corona.Color.B) - int(entry.Color.Max.B), 0));
+				break;
+			case LCM_Intersect:
+				colorMin.R = byte(int(corona.Color.R) & int(entry.Color.Min.R));
+				colorMin.G = byte(int(corona.Color.G) & int(entry.Color.Min.G));
+				colorMin.B = byte(int(corona.Color.B) & int(entry.Color.Min.B));
+				colorMax.R = byte(int(corona.Color.R) & int(entry.Color.Max.R));
+				colorMax.G = byte(int(corona.Color.G) & int(entry.Color.Max.G));
+				colorMax.B = byte(int(corona.Color.B) & int(entry.Color.Max.B));
+				break;
+			case LCM_Merge:
+				colorMin.R = byte(int(corona.Color.R) | int(entry.Color.Min.R));
+				colorMin.G = byte(int(corona.Color.G) | int(entry.Color.Min.G));
+				colorMin.B = byte(int(corona.Color.B) | int(entry.Color.Min.B));
+				colorMax.R = byte(int(corona.Color.R) | int(entry.Color.Max.R));
+				colorMax.G = byte(int(corona.Color.G) | int(entry.Color.Max.G));
+				colorMax.B = byte(int(corona.Color.B) | int(entry.Color.Max.B));
+				break;
+			case LCM_Exclude:
+				colorMin.R = byte(int(corona.Color.R) ^ int(entry.Color.Min.R));
+				colorMin.G = byte(int(corona.Color.G) ^ int(entry.Color.Min.G));
+				colorMin.B = byte(int(corona.Color.B) ^ int(entry.Color.Min.B));
+				colorMax.R = byte(int(corona.Color.R) ^ int(entry.Color.Max.R));
+				colorMax.G = byte(int(corona.Color.G) ^ int(entry.Color.Max.G));
+				colorMax.B = byte(int(corona.Color.B) ^ int(entry.Color.Max.B));
+				break;
+		}
+		c.R = byte(lerp(alpha, colorMin.R, colorMax.R) * opacity);
+		c.G = byte(lerp(alpha, colorMin.G, colorMax.G) * opacity);
+		c.B = byte(lerp(alpha, colorMin.B, colorMax.B) * opacity);
+		
+		//color (check)
+		if (c.R == 0 && c.G == 0 && c.B == 0) {
+			continue;
+		}
+		
+		//point
+		pointVector = vector * entry.Position;
+		point.X = corona.Point.X + pointVector.X;
+		point.Y = corona.Point.Y + pointVector.Y;
+		
+		//draw
+		frame.Canvas.DrawColor = c;
+		frame.Canvas.bNoSmooth = !entry.Texture.bSmooth;
+		drawSprite(frame, entry.Texture.Value, point, scale, true, true, entry.Texture.Mode);
 	}
 }
 
@@ -712,8 +757,8 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 
 defaultproperties
 {
-	//editables (controller)
-	Corona=(Texture=(Value=Texture'Corona'),Size=1.0,Glow=1.0)
+	//editables (controller - corona)
+	Corona=(Texture=(bSmooth=true,Value=Texture'Corona'),Size=1.0,Glow=1.0)
 	Corona=(Scale=(Value=(U=1.0,V=1.0)))
 	Corona=(Color=(Value=(R=255,G=255,B=255)))
 	Corona=(Link=(Density=1.0,Alignment=CLA_Center))
@@ -721,4 +766,14 @@ defaultproperties
 	Corona=(Link=(Gradient=(Glow=(Value1=1.0,Value2=1.0))))
 	Corona=(Link=(Gradient=(Scale=(Value1=(U=1.0,V=1.0),Value2=(U=1.0,V=1.0)))))
 	Corona=(Link=(Gradient=(Color=(Value1=(R=255,G=255,B=255),Value2=(R=255,G=255,B=255)))))
+	
+	//editables (controller - lensflare)
+	//Lensflare=(Custom[0]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[1]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[2]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[3]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[4]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[5]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[6]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
+	//Lensflare=(Custom[7]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
 }
