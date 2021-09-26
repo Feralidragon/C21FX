@@ -88,6 +88,7 @@ enum ELensflareColorMode
 	LCM_Value,
 	LCM_Add,
 	LCM_Subtract,
+	LCM_Multiply,
 	LCM_Intersect,
 	LCM_Merge,
 	LCM_Exclude
@@ -538,7 +539,7 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 	local byte i;
 	local RenderPoint2D point;
 	local RenderScale2D scale;
-	local float degree, opacity, alpha, fscale;
+	local float degree, opacity, alpha, fscale, f;
 	local color colorMin, colorMax, c;
 	local vector vector, pointVector;
 	local NodeLensflareEntry entry;
@@ -626,6 +627,15 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 				colorMax.R = byte(max(int(corona.Color.R) - int(entry.Color.Max.R), 0));
 				colorMax.G = byte(max(int(corona.Color.G) - int(entry.Color.Max.G), 0));
 				colorMax.B = byte(max(int(corona.Color.B) - int(entry.Color.Max.B), 0));
+				break;
+			case LCM_Multiply:
+				f = 1.0 / 255.0;
+				colorMin.R = byte(fmin(float(corona.Color.R) * float(entry.Color.Min.R) * f, 255.0));
+				colorMin.G = byte(fmin(float(corona.Color.G) * float(entry.Color.Min.G) * f, 255.0));
+				colorMin.B = byte(fmin(float(corona.Color.B) * float(entry.Color.Min.B) * f, 255.0));
+				colorMax.R = byte(fmin(float(corona.Color.R) * float(entry.Color.Max.R) * f, 255.0));
+				colorMax.G = byte(fmin(float(corona.Color.G) * float(entry.Color.Max.G) * f, 255.0));
+				colorMax.B = byte(fmin(float(corona.Color.B) * float(entry.Color.Max.B) * f, 255.0));
 				break;
 			case LCM_Intersect:
 				colorMin.R = byte(int(corona.Color.R) & int(entry.Color.Min.R));
