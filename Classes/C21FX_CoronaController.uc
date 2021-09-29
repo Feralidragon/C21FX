@@ -21,15 +21,15 @@ class C21FX_CoronaController extends C21FX_Controller;
 #exec TEXTURE IMPORT NAME=Lensflare8Q FILE=Textures/Lensflares/SD/Lensflare8Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
 
 //Import directives (textures - lensflares HD)
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare0Q FILE=Textures/Lensflares/HD/Lensflare0Q.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare1Q FILE=Textures/Lensflares/HD/Lensflare1Q.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare2Q FILE=Textures/Lensflares/HD/Lensflare2Q.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare3Q FILE=Textures/Lensflares/HD/Lensflare3Q.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare4Q FILE=Textures/Lensflares/HD/Lensflare4Q.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare5Q FILE=Textures/Lensflares/HD/Lensflare5Q.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare6D FILE=Textures/Lensflares/HD/Lensflare6D.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare7D FILE=Textures/Lensflares/HD/Lensflare7D.png GROUP=Lensflares MIPS=OFF LODSET=0
-#exec TEXTURE MERGECOMPRESSED NAME=Lensflare8Q FILE=Textures/Lensflares/HD/Lensflare8Q.png GROUP=Lensflares MIPS=OFF LODSET=0
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare0Q FILE=Textures/Lensflares/HD/Lensflare0Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare1Q FILE=Textures/Lensflares/HD/Lensflare1Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare2Q FILE=Textures/Lensflares/HD/Lensflare2Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare3Q FILE=Textures/Lensflares/HD/Lensflare3Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare4Q FILE=Textures/Lensflares/HD/Lensflare4Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare5Q FILE=Textures/Lensflares/HD/Lensflare5Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare6D FILE=Textures/Lensflares/HD/Lensflare6D.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare7D FILE=Textures/Lensflares/HD/Lensflare7D.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
+#exec TEXTURE MERGECOMPRESSED NAME=Lensflare8Q FILE=Textures/Lensflares/HD/Lensflare8Q.png GROUP=Lensflares MIPS=OFF LODSET=0 FORMAT=BC7
 
 
 //Constants
