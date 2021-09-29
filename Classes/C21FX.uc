@@ -21,10 +21,10 @@ enum ERenderPoint2DVisibility
 
 enum ERenderTextureMode
 {
-	RTM_Single,
-	RTM_DoubleU,
-	RTM_DoubleV,
-	RTM_Quadruple
+	RTM_Normal,
+	RTM_MirrorU,
+	RTM_MirrorV,
+	RTM_MirrorQ
 };
 
 
@@ -238,7 +238,7 @@ final static function drawSprite(
 	
 	//center X
 	if (bCenterX) {
-		if (mode == RTM_Single || mode == RTM_DoubleV) {
+		if (mode == RTM_Normal || mode == RTM_MirrorV) {
 			x -= u * 0.5;
 		} else {
 			x -= u;
@@ -247,7 +247,7 @@ final static function drawSprite(
 	
 	//center Y
 	if (bCenterY) {
-		if (mode == RTM_Single || mode == RTM_DoubleU) {
+		if (mode == RTM_Normal || mode == RTM_MirrorU) {
 			y -= v * 0.5;
 		} else {
 			y -= v;
@@ -257,15 +257,15 @@ final static function drawSprite(
 	//draw
 	frame.Canvas.setPos(x, y);
 	frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, texture.VSize);
-	if (mode == RTM_DoubleU || mode == RTM_Quadruple) {
+	if (mode == RTM_MirrorU || mode == RTM_MirrorQ) {
 		frame.Canvas.setPos(x + u, y);
 		frame.Canvas.drawTile(texture, u, v, 0, 0, -texture.USize, texture.VSize);
 	}
-	if (mode == RTM_DoubleV || mode == RTM_Quadruple) {
+	if (mode == RTM_MirrorV || mode == RTM_MirrorQ) {
 		frame.Canvas.setPos(x, y + v);
 		frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, -texture.VSize);
 	}
-	if (mode == RTM_Quadruple) {
+	if (mode == RTM_MirrorQ) {
 		frame.Canvas.setPos(x + u, y + v);
 		frame.Canvas.drawTile(texture, u, v, 0, 0, -texture.USize, -texture.VSize);
 	}
