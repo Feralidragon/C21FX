@@ -254,6 +254,12 @@ final static function drawSprite(
 		}
 	}
 	
+	//normalize
+	u = int(u);
+	v = int(v);
+	x = int(x);
+	y = int(y);
+	
 	//draw
 	frame.Canvas.setPos(x, y);
 	frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, texture.VSize);
