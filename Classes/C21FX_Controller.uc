@@ -48,7 +48,7 @@ var private C21FX_Point rootPoint;
 
 replication
 {
-	reliable if (Role == ROLE_Authority && bNetInitial)
+	reliable if (Role == ROLE_Authority)
 		NodesTag, Visibility;
 }
 
