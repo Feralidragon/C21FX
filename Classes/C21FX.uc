@@ -217,20 +217,24 @@ final static function color hsbToColor(byte hue, byte saturation, byte brightnes
 }
 
 final static function drawSprite(
-	RenderFrame frame, Texture texture, RenderPoint2D point, RenderScale2D scale, optional bool bCenterX,
-	optional bool bCenterY, optional ERenderTextureMode mode
+	RenderFrame frame, Texture texture, color color, RenderPoint2D point, RenderScale2D scale, optional bool bCenterX,
+	optional bool bCenterY, optional ERenderTextureMode mode, optional bool bSmooth
 ) {
 	//local
-	local float u, v, x, y;
+	local float uSize, vSize, u, v, x, y, offset;
 	
 	//check
 	if (texture == none) {
 		return;
 	}
 	
+	//texture
+	uSize = float(texture.USize);
+	vSize = float(texture.VSize);
+	
 	//uv
-	u = float(texture.USize) * scale.U;
-	v = float(texture.VSize) * scale.V;
+	u = uSize * scale.U;
+	v = vSize * scale.V;
 	
 	//xy
 	x = point.X;
@@ -254,26 +258,37 @@ final static function drawSprite(
 		}
 	}
 	
+	//bilinear offset
+	if (bSmooth) {
+		offset = 1.0;
+		uSize -= offset * 2.0;
+		vSize -= offset * 2.0;
+	}
+	
 	//normalize
 	u = int(u);
 	v = int(v);
 	x = int(x);
 	y = int(y);
+	uSize = int(uSize);
+	vSize = int(vSize);
 	
 	//draw
+	frame.Canvas.DrawColor = color;
+	frame.Canvas.bNoSmooth = !bSmooth;
 	frame.Canvas.setPos(x, y);
-	frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, texture.VSize);
+	frame.Canvas.drawTile(texture, u, v, offset, offset, uSize, vSize);
 	if (mode == RTM_MirrorU || mode == RTM_MirrorQ) {
 		frame.Canvas.setPos(x + u, y);
-		frame.Canvas.drawTile(texture, u, v, 0, 0, -texture.USize, texture.VSize);
+		frame.Canvas.drawTile(texture, u, v, -offset, offset, -uSize, vSize);
 	}
 	if (mode == RTM_MirrorV || mode == RTM_MirrorQ) {
 		frame.Canvas.setPos(x, y + v);
-		frame.Canvas.drawTile(texture, u, v, 0, 0, texture.USize, -texture.VSize);
+		frame.Canvas.drawTile(texture, u, v, offset, -offset, uSize, -vSize);
 	}
 	if (mode == RTM_MirrorQ) {
 		frame.Canvas.setPos(x + u, y + v);
-		frame.Canvas.drawTile(texture, u, v, 0, 0, -texture.USize, -texture.VSize);
+		frame.Canvas.drawTile(texture, u, v, -offset, -offset, -uSize, -vSize);
 	}
 }
 
