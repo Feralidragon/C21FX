@@ -6,8 +6,12 @@
 
 class C21FX_CoronaController extends C21FX_Controller;
 
-//Import directives (textures - coronas)
-#exec TEXTURE IMPORT NAME=Corona FILE=Textures/Coronas/Corona.bmp GROUP=Coronas MIPS=OFF LODSET=0
+//Import directives (textures - coronas SD)
+#exec TEXTURE IMPORT NAME=Corona FILE=Textures/Coronas/SD/Corona.bmp GROUP=Coronas MIPS=OFF LODSET=0
+#exec TEXTURE IMPORT NAME=CoronaSunQ FILE=Textures/Coronas/SD/CoronaSunQ.bmp GROUP=Coronas MIPS=OFF LODSET=0
+
+//Import directives (textures - coronas HD)
+#exec TEXTURE MERGECOMPRESSED NAME=CoronaSunQ FILE=Textures/Coronas/HD/CoronaSunQ.png GROUP=Coronas MIPS=OFF LODSET=0 FORMAT=BC7
 
 //Import directives (textures - lensflares SD)
 #exec TEXTURE IMPORT NAME=Lensflare0Q FILE=Textures/Lensflares/SD/Lensflare0Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
@@ -99,6 +103,13 @@ enum ELensflareSizeMode
 	LSM_Fixed,
 	LSM_Relative,
 	LSM_Absolute
+};
+
+enum ELensflareSizeRelativityMode
+{
+	LSRM_None,
+	LSRM_Linear,
+	LSRM_NonLinear
 };
 
 
@@ -198,8 +209,16 @@ struct NodeLensflareColor
 	var() color Max;
 };
 
+struct NodeLensflareSizeRelativity
+{
+	var() bool bInvert;
+	var() ELensflareSizeRelativityMode Mode;
+};
+
 struct NodeLensflareSize
 {
+	var() NodeLensflareSizeRelativity OpacityRelativity;
+	var() NodeLensflareSizeRelativity PositionRelativity;
 	var() ELensflareSizeMode Mode;
 	var() float Min;
 	var() float Max;
@@ -603,7 +622,7 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 	local byte i;
 	local RenderPoint2D point;
 	local RenderScale2D scale;
-	local float degree, opacity, alpha, fscale, f;
+	local float degree, opacity, alpha, size, f;
 	local color colorMin, colorMax, c;
 	local vector vector, pointVector;
 	local NodeLensflareEntry entry;
@@ -656,16 +675,29 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 		//alpha
 		alpha = (degree - entry.Degree.Min) / (entry.Degree.Max - entry.Degree.Min);
 		
+		//size
+		size = lerp(alpha, entry.Size.Min, entry.Size.Max);
+		if (entry.Size.OpacityRelativity.Mode > LSRM_None) {
+			size *= lensflareSizeRelativityAlpha(opacity, entry.Size.OpacityRelativity);
+		}
+		if (entry.Size.PositionRelativity.Mode > LSRM_None) {
+			size *= lensflareSizeRelativityAlpha(abs(entry.Position), entry.Size.OpacityRelativity);
+		}
+		
+		//size (check)
+		if (size <= 0.0) {
+			continue;
+		}
+		
 		//scale
-		fscale = lerp(alpha, entry.Size.Min, entry.Size.Max);
-		scale.U = fscale * lerp(alpha, entry.Scale.Min.U, entry.Scale.Max.U);
-		scale.V = fscale * lerp(alpha, entry.Scale.Min.V, entry.Scale.Max.V);
+		scale.U = size * lerp(alpha, entry.Scale.Min.U, entry.Scale.Max.U);
+		scale.V = size * lerp(alpha, entry.Scale.Min.V, entry.Scale.Max.V);
 		switch (entry.Size.Mode) {
 			case LSM_Fixed:
-				fscale = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
+				size = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
 					LENSFLARE_SIZE_FIXED / float(max(entry.Texture.Value.USize, entry.Texture.Value.VSize));
-				scale.U *= fscale;
-				scale.V *= fscale;
+				scale.U *= size;
+				scale.V *= size;
 				break;
 			case LSM_Relative:
 				scale.U *= corona.Scale.U;
@@ -838,6 +870,22 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 }
 
 
+//Final static functions
+final static function float lensflareSizeRelativityAlpha(float alpha, NodeLensflareSizeRelativity relativity)
+{
+	if (relativity.Mode == LSRM_NonLinear) {
+		if (relativity.bInvert) {
+			alpha = smerp(alpha, 1.0, 0.0);
+		} else {
+			alpha = smerp(alpha, 0.0, 1.0);
+		}
+	} else if (relativity.bInvert) {
+		alpha = 1.0 - alpha;
+	}
+	return alpha;
+}
+
+
 
 defaultproperties
 {
@@ -862,51 +910,69 @@ defaultproperties
 	//Lensflare=(Custom[7]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
 	
 	//privates (lensflare preset - sun)
-	LensflarePresetSunEntries(0)=(Glow=1.00,Position=0.0)
-	LensflarePresetSunEntries(0)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare5Q'))
-	LensflarePresetSunEntries(0)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=128)))
-	LensflarePresetSunEntries(0)=(Size=(Mode=LSM_Relative,Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(0)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=0.75,Max=1.0))
+	LensflarePresetSunEntries(0)=(Glow=1.0,Position=0.0)
+	LensflarePresetSunEntries(0)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'CoronaSunQ'))
+	LensflarePresetSunEntries(0)=(Color=(Mode=LCM_Value,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetSunEntries(0)=(Size=(Mode=LSM_Relative,Min=0.5,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(0)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
 	
-	LensflarePresetSunEntries(1)=(Glow=0.1,Position=0.2)
-	LensflarePresetSunEntries(1)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare8Q'))
-	LensflarePresetSunEntries(1)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSunEntries(1)=(Size=(Mode=LSM_Fixed,Min=1.25,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(1)=(Degree=(Min=0.2,FadeMin=0.4,FadeMax=0.7,Max=1.0))
+	LensflarePresetSunEntries(1)=(Glow=0.4,Position=0.0)
+	LensflarePresetSunEntries(1)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare4Q'))
+	LensflarePresetSunEntries(1)=(Color=(Mode=LCM_Same))
+	LensflarePresetSunEntries(1)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(1)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=0.75,Max=1.0))
 	
-	LensflarePresetSunEntries(2)=(Glow=0.1,Position=1.0)
-	LensflarePresetSunEntries(2)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
-	LensflarePresetSunEntries(2)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=192)))
-	LensflarePresetSunEntries(2)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.375),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(2)=(Degree=(Min=0.0,FadeMin=0.35,FadeMax=0.8,Max=0.9))
+	LensflarePresetSunEntries(2)=(Glow=0.15,Position=0.0)
+	LensflarePresetSunEntries(2)=(Texture=(bSmooth=true,Mode=RTM_MirrorU,Value=Texture'Lensflare6D'))
+	LensflarePresetSunEntries(2)=(Color=(Mode=LCM_Same))
+	LensflarePresetSunEntries(2)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=2.0,V=1.0),Max=(U=4.0,V=1.0)))
+	LensflarePresetSunEntries(2)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
 	
-	LensflarePresetSunEntries(3)=(Glow=0.1,Position=0.35)
-	LensflarePresetSunEntries(3)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare1Q'))
-	LensflarePresetSunEntries(3)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=255,B=192)))
-	LensflarePresetSunEntries(3)=(Size=(Mode=LSM_Fixed,Min=0.3,Max=1.5),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(3)=(Degree=(Min=0.05,FadeMin=0.35,FadeMax=0.7,Max=0.95))
+	LensflarePresetSunEntries(3)=(Glow=0.15,Position=0.0)
+	LensflarePresetSunEntries(3)=(Texture=(bSmooth=true,Mode=RTM_MirrorV,Value=Texture'Lensflare7D'))
+	LensflarePresetSunEntries(3)=(Color=(Mode=LCM_Same))
+	LensflarePresetSunEntries(3)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=1.0,V=2.0),Max=(U=1.0,V=4.0)))
+	LensflarePresetSunEntries(3)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
 	
-	LensflarePresetSunEntries(4)=(Glow=0.75,Position=0.65)
-	LensflarePresetSunEntries(4)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
-	LensflarePresetSunEntries(4)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=192,G=255,B=192)))
-	LensflarePresetSunEntries(4)=(Size=(Mode=LSM_Fixed,Min=0.05,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(4)=(Degree=(Min=0.1,FadeMin=0.6,FadeMax=0.8,Max=0.95))
+	LensflarePresetSunEntries(4)=(Glow=0.25,Position=0.2)
+	LensflarePresetSunEntries(4)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare8Q'))
+	LensflarePresetSunEntries(4)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetSunEntries(4)=(Size=(Mode=LSM_Fixed,Min=1.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(4)=(Degree=(Min=0.2,FadeMin=0.4,FadeMax=0.7,Max=1.0))
 	
-	LensflarePresetSunEntries(5)=(Glow=0.075,Position=0.75)
+	LensflarePresetSunEntries(5)=(Glow=0.2,Position=1.0)
 	LensflarePresetSunEntries(5)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
-	LensflarePresetSunEntries(5)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=192),Max=(R=192,G=255,B=255)))
-	LensflarePresetSunEntries(5)=(Size=(Mode=LSM_Fixed,Min=0.4,Max=0.95),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(5)=(Degree=(Min=0.0,FadeMin=0.2,FadeMax=0.85,Max=0.95))
+	LensflarePresetSunEntries(5)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=192)))
+	LensflarePresetSunEntries(5)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.375),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(5)=(Degree=(Min=0.0,FadeMin=0.35,FadeMax=0.8,Max=0.9))
 	
-	LensflarePresetSunEntries(6)=(Glow=0.65,Position=0.8)
-	LensflarePresetSunEntries(6)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
-	LensflarePresetSunEntries(6)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=192,B=255)))
-	LensflarePresetSunEntries(6)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.4),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(6)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.5,Max=0.95))
+	LensflarePresetSunEntries(6)=(Glow=0.2,Position=0.35)
+	LensflarePresetSunEntries(6)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare2Q'))
+	LensflarePresetSunEntries(6)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=255,B=192)))
+	LensflarePresetSunEntries(6)=(Size=(Mode=LSM_Fixed,Min=0.3,Max=1.5),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(6)=(Degree=(Min=0.05,FadeMin=0.35,FadeMax=0.7,Max=0.95))
 	
-	LensflarePresetSunEntries(7)=(Glow=0.085,Position=0.45)
-	LensflarePresetSunEntries(7)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
-	LensflarePresetSunEntries(7)=(Color=(Mode=LCM_Multiply,Min=(R=192,G=255,B=255),Max=(R=128,G=255,B=192)))
-	LensflarePresetSunEntries(7)=(Size=(Mode=LSM_Fixed,Min=0.2,Max=0.75),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(7)=(Degree=(Min=0.1,FadeMin=0.2,FadeMax=0.9,Max=1.0))
+	LensflarePresetSunEntries(7)=(Glow=0.75,Position=0.65)
+	LensflarePresetSunEntries(7)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
+	LensflarePresetSunEntries(7)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=192,G=255,B=192)))
+	LensflarePresetSunEntries(7)=(Size=(Mode=LSM_Fixed,Min=0.05,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(7)=(Degree=(Min=0.1,FadeMin=0.6,FadeMax=0.8,Max=0.95))
+	
+	LensflarePresetSunEntries(8)=(Glow=0.15,Position=0.75)
+	LensflarePresetSunEntries(8)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
+	LensflarePresetSunEntries(8)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=192),Max=(R=192,G=255,B=255)))
+	LensflarePresetSunEntries(8)=(Size=(Mode=LSM_Fixed,Min=0.4,Max=0.95),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(8)=(Degree=(Min=0.0,FadeMin=0.2,FadeMax=0.85,Max=0.95))
+	
+	LensflarePresetSunEntries(9)=(Glow=0.65,Position=0.8)
+	LensflarePresetSunEntries(9)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
+	LensflarePresetSunEntries(9)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=192,B=255)))
+	LensflarePresetSunEntries(9)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.4),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(9)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.5,Max=0.95))
+	
+	LensflarePresetSunEntries(10)=(Glow=0.17,Position=0.45)
+	LensflarePresetSunEntries(10)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
+	LensflarePresetSunEntries(10)=(Color=(Mode=LCM_Multiply,Min=(R=192,G=255,B=255),Max=(R=128,G=255,B=192)))
+	LensflarePresetSunEntries(10)=(Size=(Mode=LSM_Fixed,Min=0.2,Max=0.75),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSunEntries(10)=(Degree=(Min=0.1,FadeMin=0.2,FadeMax=0.9,Max=1.0))
 }
