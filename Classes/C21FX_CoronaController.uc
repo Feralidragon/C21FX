@@ -280,10 +280,17 @@ struct NodeLensflareSize
 	var() NodeLensflareSizeMultiplier Multiplier;
 };
 
+struct NodeLensflareScaleMultiplier
+{
+	var() NodeLensflareMultiplier Opacity;
+	var() NodeLensflareMultiplier Position;
+};
+
 struct NodeLensflareScale
 {
 	var() RenderScale2D Min;
 	var() RenderScale2D Max;
+	var() NodeLensflareScaleMultiplier Multiplier;
 };
 
 struct NodeLensflareDegree
@@ -686,7 +693,7 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 	local byte i, j, count;
 	local RenderPoint2D point;
 	local RenderScale2D scale;
-	local float degree, position, absPosition, opacity, alpha, size, cAlpha, f;
+	local float degree, position, absPosition, opacity, alpha, size, sAlpha, cAlpha, f;
 	local color colorMin, colorMax, c;
 	local vector vector, pointVector;
 	local NodeLensflareEntry entry;
@@ -778,23 +785,35 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 			//alpha
 			alpha = (degree - entry.Degree.Min) / (entry.Degree.Max - entry.Degree.Min);
 			
-			//size
-			size = lerp(alpha, entry.Size.Min, entry.Size.Max);
+			//size (alpha)
+			sAlpha = alpha;
 			if (entry.Size.Multiplier.Opacity.Mode != LMM_None) {
-				size *= lensflareMultiplierAlpha(opacity, entry.Size.Multiplier.Opacity);
+				sAlpha *= lensflareMultiplierAlpha(opacity, entry.Size.Multiplier.Opacity);
 			}
 			if (entry.Size.Multiplier.Position.Mode != LMM_None) {
-				size *= lensflareMultiplierAlpha(absPosition, entry.Size.Multiplier.Position);
+				sAlpha *= lensflareMultiplierAlpha(absPosition, entry.Size.Multiplier.Position);
 			}
+			
+			//size
+			size = lerp(sAlpha, entry.Size.Min, entry.Size.Max);
 			
 			//size (check)
 			if (size <= 0.0) {
 				continue;
 			}
 			
-			//scale
-			scale.U = size * lerp(alpha, entry.Scale.Min.U, entry.Scale.Max.U);
-			scale.V = size * lerp(alpha, entry.Scale.Min.V, entry.Scale.Max.V);
+			//scale (alpha)
+			sAlpha = alpha;
+			if (entry.Scale.Multiplier.Opacity.Mode != LMM_None) {
+				sAlpha *= lensflareMultiplierAlpha(opacity, entry.Scale.Multiplier.Opacity);
+			}
+			if (entry.Scale.Multiplier.Position.Mode != LMM_None) {
+				sAlpha *= lensflareMultiplierAlpha(absPosition, entry.Scale.Multiplier.Position);
+			}
+			
+			//scale (set)
+			scale.U = size * lerp(sAlpha, entry.Scale.Min.U, entry.Scale.Max.U);
+			scale.V = size * lerp(sAlpha, entry.Scale.Min.V, entry.Scale.Max.V);
 			switch (entry.Size.Mode) {
 				case LSM_Fixed:
 					size = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
