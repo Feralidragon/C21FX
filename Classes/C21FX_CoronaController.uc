@@ -76,14 +76,14 @@ enum ECoronaLinkGradientMode
 	CLGM_NonLinear
 };
 
-enum ELensflareKind
+enum ELensflarePreset
 {
-	LK_None,
-	LK_Sun,
-	LK_Preset2,
-	LK_Preset3,
-	LK_Preset4,
-	LK_Custom
+	LP_None,
+	LP_Sun,
+	LP_Preset2,
+	LP_Preset3,
+	LP_Preset4,
+	LP_Custom
 };
 
 enum ELensflareMultiplierMode
@@ -314,8 +314,7 @@ struct NodeLensflareEntry
 
 struct NodeLensflare
 {
-	var() ELensflareKind Kind;
-	var() NodeLensflareEntry Custom[LENSFLARE_ENTRIES_COUNT];
+	var() ELensflarePreset Preset;
 };
 
 struct NodeLensflareCorona
@@ -337,10 +336,11 @@ var(Controller) NodeLensflare Lensflare;
 
 //Editable properties (presets)
 var(Presets) NodeLensflareEntry LensflarePresetSun[LENSFLARE_ENTRIES_COUNT];
+var(Presets) NodeLensflareEntry LensflarePresetCustom[LENSFLARE_ENTRIES_COUNT];
 
 
 //Private properties
-var private ELensflareKind LensflareKind;
+var private ELensflarePreset LensflarePreset;
 var private NodeLensflareEntry LensflareEntry00;
 var private NodeLensflareEntry LensflareEntry01;
 var private NodeLensflareEntry LensflareEntry02;
@@ -363,7 +363,7 @@ var private NodeLensflareEntry LensflareEntries[LENSFLARE_ENTRIES_COUNT];
 replication
 {
 	reliable if (Role == ROLE_Authority)
-		Corona, LensflareKind, LensflareEntry00, LensflareEntry01, LensflareEntry02, LensflareEntry03, LensflareEntry04,
+		Corona, LensflarePreset, LensflareEntry00, LensflareEntry01, LensflareEntry02, LensflareEntry03, LensflareEntry04,
 		LensflareEntry05, LensflareEntry06, LensflareEntry07, LensflareEntry08, LensflareEntry09, LensflareEntry10,
 		LensflareEntry11, LensflareEntry12, LensflareEntry13, LensflareEntry14, LensflareEntry15;
 }
@@ -385,17 +385,17 @@ event initialize()
 	Corona.Link.Gradient.Glow.Value2 = fclamp(Corona.Link.Gradient.Glow.Value2, 0.0, 1.0);
 	
 	//lensflares
-	LensflareKind = Lensflare.Kind;
-	if (LensflareKind != LK_None) {
+	LensflarePreset = Lensflare.Preset;
+	if (LensflarePreset != LP_None) {
 		//prepare
 		for (i = 0; i < LENSFLARE_ENTRIES_COUNT; i++) {
 			//set
-			switch (LensflareKind) {
-				case LK_Sun:
+			switch (LensflarePreset) {
+				case LP_Sun:
 					LensflareEntries[i] = LensflarePresetSun[i];
 					break;
 				default:
-					LensflareEntries[i] = Lensflare.Custom[i];
+					LensflareEntries[i] = LensflarePresetCustom[i];
 					break;
 			}
 			
@@ -443,7 +443,7 @@ simulated event initializeNodesRender(RenderFrame frame)
 	frame.Canvas.Style = ERenderStyle.STY_Translucent;
 	
 	//lensflares
-	if (LensflareKind != LK_None) {
+	if (LensflarePreset != LP_None) {
 		LensflareEntries[0] = LensflareEntry00;
 		LensflareEntries[1] = LensflareEntry01;
 		LensflareEntries[2] = LensflareEntry02;
@@ -674,7 +674,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	drawSprite(frame, Corona.Texture.Value, c, point, scale, true, true, Corona.Texture.Render, Corona.Texture.bSmooth);
 	
 	//lensflares
-	if (LensflareKind != LK_None) {
+	if (LensflarePreset != LP_None) {
 		lCorona.Color = color;
 		lCorona.Opacity = opacity;
 		lCorona.Distance = node.Distance;
@@ -701,7 +701,7 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 	local ERenderTextureMode renderMode;
 	
 	//check
-	if (LensflareKind == LK_None) {
+	if (LensflarePreset == LP_None) {
 		return;
 	}
 	
@@ -1030,91 +1030,194 @@ defaultproperties
 	Corona=(Link=(Gradient=(Scale=(Value1=(U=1.0,V=1.0),Value2=(U=1.0,V=1.0)))))
 	Corona=(Link=(Gradient=(Color=(Value1=(R=255,G=255,B=255),Value2=(R=255,G=255,B=255)))))
 	
-	//editables (controller - lensflare)
-	//Lensflare=(Custom[0]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[1]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[2]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[3]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[4]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[5]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[6]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	//Lensflare=(Custom[7]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
-	
-	//editables (presets - sun lensflare)
-	LensflarePresetSun(0)=(Position=(Value=0.0))
+	//editables (presets - sun lensflares)
 	LensflarePresetSun(0)=(Glow=(Value=1.0))
+	LensflarePresetSun(0)=(Position=(Value=0.0))
 	LensflarePresetSun(0)=(Texture=(bSmooth=true,Mode=LTM_Same))
 	LensflarePresetSun(0)=(Color=(Mode=LCM_Value,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetSun(0)=(Size=(Mode=LSM_Relative,Min=0.5,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(0)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
 	
-	LensflarePresetSun(1)=(Position=(Value=0.0))
 	LensflarePresetSun(1)=(Glow=(Value=0.4))
+	LensflarePresetSun(1)=(Position=(Value=0.0))
 	LensflarePresetSun(1)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare4Q'))
 	LensflarePresetSun(1)=(Color=(Mode=LCM_Same))
 	LensflarePresetSun(1)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(1)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=0.75,Max=1.0))
 	
-	LensflarePresetSun(2)=(Position=(Value=0.0))
 	LensflarePresetSun(2)=(Glow=(Value=0.15))
+	LensflarePresetSun(2)=(Position=(Value=0.0))
 	LensflarePresetSun(2)=(Texture=(bSmooth=true,Render=RTM_MirrorU,Value=Texture'Lensflare6D'))
 	LensflarePresetSun(2)=(Color=(Mode=LCM_Same))
 	LensflarePresetSun(2)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=2.0,V=1.0),Max=(U=4.0,V=1.0)))
 	LensflarePresetSun(2)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
 	
-	LensflarePresetSun(3)=(Position=(Value=0.0))
 	LensflarePresetSun(3)=(Glow=(Value=0.15))
+	LensflarePresetSun(3)=(Position=(Value=0.0))
 	LensflarePresetSun(3)=(Texture=(bSmooth=true,Render=RTM_MirrorV,Value=Texture'Lensflare7D'))
 	LensflarePresetSun(3)=(Color=(Mode=LCM_Same))
 	LensflarePresetSun(3)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=1.0,V=2.0),Max=(U=1.0,V=4.0)))
 	LensflarePresetSun(3)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
 	
-	LensflarePresetSun(4)=(Position=(Value=0.2))
 	LensflarePresetSun(4)=(Glow=(Value=0.25))
+	LensflarePresetSun(4)=(Position=(Value=0.2))
 	LensflarePresetSun(4)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare8Q'))
 	LensflarePresetSun(4)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetSun(4)=(Size=(Mode=LSM_Fixed,Min=1.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(4)=(Degree=(Min=0.2,FadeMin=0.4,FadeMax=0.7,Max=1.0))
 	
-	LensflarePresetSun(5)=(Position=(Value=1.0))
 	LensflarePresetSun(5)=(Glow=(Value=0.2))
+	LensflarePresetSun(5)=(Position=(Value=1.0))
 	LensflarePresetSun(5)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
 	LensflarePresetSun(5)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=192)))
 	LensflarePresetSun(5)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.375),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(5)=(Degree=(Min=0.0,FadeMin=0.35,FadeMax=0.8,Max=0.9))
 	
-	LensflarePresetSun(6)=(Position=(Value=0.35))
 	LensflarePresetSun(6)=(Glow=(Value=0.2))
+	LensflarePresetSun(6)=(Position=(Value=0.35))
 	LensflarePresetSun(6)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare2Q'))
 	LensflarePresetSun(6)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=255,B=192)))
 	LensflarePresetSun(6)=(Size=(Mode=LSM_Fixed,Min=0.3,Max=1.5),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(6)=(Degree=(Min=0.05,FadeMin=0.35,FadeMax=0.7,Max=0.95))
 	
-	LensflarePresetSun(7)=(Position=(Value=0.65))
 	LensflarePresetSun(7)=(Glow=(Value=0.75))
+	LensflarePresetSun(7)=(Position=(Value=0.65))
 	LensflarePresetSun(7)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
 	LensflarePresetSun(7)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=192,G=255,B=192)))
 	LensflarePresetSun(7)=(Size=(Mode=LSM_Fixed,Min=0.05,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(7)=(Degree=(Min=0.1,FadeMin=0.6,FadeMax=0.8,Max=0.95))
 	
-	LensflarePresetSun(8)=(Position=(Value=0.75))
 	LensflarePresetSun(8)=(Glow=(Value=0.15))
+	LensflarePresetSun(8)=(Position=(Value=0.75))
 	LensflarePresetSun(8)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
 	LensflarePresetSun(8)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=192),Max=(R=192,G=255,B=255)))
 	LensflarePresetSun(8)=(Size=(Mode=LSM_Fixed,Min=0.4,Max=0.95),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(8)=(Degree=(Min=0.0,FadeMin=0.2,FadeMax=0.85,Max=0.95))
 	
-	LensflarePresetSun(9)=(Position=(Value=0.8))
 	LensflarePresetSun(9)=(Glow=(Value=0.65))
+	LensflarePresetSun(9)=(Position=(Value=0.8))
 	LensflarePresetSun(9)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
 	LensflarePresetSun(9)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=192,B=255)))
 	LensflarePresetSun(9)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.4),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(9)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.5,Max=0.95))
 	
-	LensflarePresetSun(10)=(Position=(Value=0.45))
 	LensflarePresetSun(10)=(Glow=(Value=0.17))
+	LensflarePresetSun(10)=(Position=(Value=0.45))
 	LensflarePresetSun(10)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
 	LensflarePresetSun(10)=(Color=(Mode=LCM_Multiply,Min=(R=192,G=255,B=255),Max=(R=128,G=255,B=192)))
 	LensflarePresetSun(10)=(Size=(Mode=LSM_Fixed,Min=0.2,Max=0.75),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(10)=(Degree=(Min=0.1,FadeMin=0.2,FadeMax=0.9,Max=1.0))
+	
+	//editables (presets - custom lensflares)
+	LensflarePresetCustom(0)=(Glow=(Value=1.0))
+	LensflarePresetCustom(0)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(0)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(0)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(0)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(0)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(1)=(Glow=(Value=1.0))
+	LensflarePresetCustom(1)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(1)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(1)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(1)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(1)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(2)=(Glow=(Value=1.0))
+	LensflarePresetCustom(2)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(2)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(2)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(2)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(2)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(3)=(Glow=(Value=1.0))
+	LensflarePresetCustom(3)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(3)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(3)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(3)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(3)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(4)=(Glow=(Value=1.0))
+	LensflarePresetCustom(4)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(4)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(4)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(4)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(4)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(5)=(Glow=(Value=1.0))
+	LensflarePresetCustom(5)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(5)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(5)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(5)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(5)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(6)=(Glow=(Value=1.0))
+	LensflarePresetCustom(6)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(6)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(6)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(6)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(6)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(7)=(Glow=(Value=1.0))
+	LensflarePresetCustom(7)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(7)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(7)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(7)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(7)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(8)=(Glow=(Value=1.0))
+	LensflarePresetCustom(8)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(8)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(8)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(8)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(8)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(9)=(Glow=(Value=1.0))
+	LensflarePresetCustom(9)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(9)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(9)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(9)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(9)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(10)=(Glow=(Value=1.0))
+	LensflarePresetCustom(10)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(10)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(10)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(10)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(10)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(11)=(Glow=(Value=1.0))
+	LensflarePresetCustom(11)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(11)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(11)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(11)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(11)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(12)=(Glow=(Value=1.0))
+	LensflarePresetCustom(12)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(12)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(12)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(12)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(12)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(13)=(Glow=(Value=1.0))
+	LensflarePresetCustom(13)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(13)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(13)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(13)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(13)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(14)=(Glow=(Value=1.0))
+	LensflarePresetCustom(14)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(14)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(14)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(14)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(14)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	
+	LensflarePresetCustom(15)=(Glow=(Value=1.0))
+	LensflarePresetCustom(15)=(Position=(Distribution=(Count=1)))
+	LensflarePresetCustom(15)=(Texture=(bSmooth=true))
+	LensflarePresetCustom(15)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetCustom(15)=(Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetCustom(15)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
 }
