@@ -86,6 +86,32 @@ enum ELensflareKind
 	LK_Custom
 };
 
+enum ELensflareMultiplierMode
+{
+	LMM_None,
+	LMM_Linear,
+	LMM_NonLinear
+};
+
+enum ELensflarePositionMode
+{
+	LPM_Value,
+	LPM_Distributed
+};
+
+enum ELensflarePositionDistributionMode
+{
+	LPDM_Front,
+	LPDM_Back,
+	LPDM_Both
+};
+
+enum ELensflareTextureMode
+{
+	LTM_Value,
+	LTM_Same
+};
+
 enum ELensflareColorMode
 {
 	LCM_Same,
@@ -105,19 +131,12 @@ enum ELensflareSizeMode
 	LSM_Absolute
 };
 
-enum ELensflareSizeRelativityMode
-{
-	LSRM_None,
-	LSRM_Linear,
-	LSRM_NonLinear
-};
-
 
 //Structures
 struct NodeCoronaTexture
 {
 	var() bool bSmooth;
-	var() ERenderTextureMode Mode;
+	var() ERenderTextureMode Render;
 	var() Texture Value;
 };
 
@@ -195,11 +214,48 @@ struct NodeCorona
 	var() NodeCoronaLink Link;
 };
 
+struct NodeLensflareMultiplier
+{
+	var() bool bInvert;
+	var() ELensflareMultiplierMode Mode;
+};
+
+struct NodeLensflarePositionDistribution
+{
+	var() byte Seed;
+	var() byte Count;
+	var() ELensflarePositionDistributionMode Mode;
+};
+
+struct NodeLensflarePosition
+{
+	var() float Value;
+	var() ELensflarePositionMode Mode;
+	var() NodeLensflarePositionDistribution Distribution;
+};
+
+struct NodeLensflareGlowMultiplier
+{
+	var() NodeLensflareMultiplier Position;
+};
+
+struct NodeLensflareGlow
+{
+	var() float Value;
+	var() NodeLensflareGlowMultiplier Multiplier;
+};
+
 struct NodeLensflareTexture
 {
 	var() bool bSmooth;
-	var() ERenderTextureMode Mode;
+	var() ELensflareTextureMode Mode;
+	var() ERenderTextureMode Render;
 	var() Texture Value;
+};
+
+struct NodeLensflareColorMultiplier
+{
+	var() NodeLensflareMultiplier Position;
 };
 
 struct NodeLensflareColor
@@ -207,21 +263,21 @@ struct NodeLensflareColor
 	var() ELensflareColorMode Mode;
 	var() color Min;
 	var() color Max;
+	var() NodeLensflareColorMultiplier Multiplier;
 };
 
-struct NodeLensflareSizeRelativity
+struct NodeLensflareSizeMultiplier
 {
-	var() bool bInvert;
-	var() ELensflareSizeRelativityMode Mode;
+	var() NodeLensflareMultiplier Opacity;
+	var() NodeLensflareMultiplier Position;
 };
 
 struct NodeLensflareSize
 {
-	var() NodeLensflareSizeRelativity OpacityRelativity;
-	var() NodeLensflareSizeRelativity PositionRelativity;
 	var() ELensflareSizeMode Mode;
 	var() float Min;
 	var() float Max;
+	var() NodeLensflareSizeMultiplier Multiplier;
 };
 
 struct NodeLensflareScale
@@ -240,8 +296,8 @@ struct NodeLensflareDegree
 
 struct NodeLensflareEntry
 {
-	var() float Glow;
-	var() float Position;
+	var() NodeLensflareGlow Glow;
+	var() NodeLensflarePosition Position;
 	var() NodeLensflareTexture Texture;
 	var() NodeLensflareColor Color;
 	var() NodeLensflareSize Size;
@@ -262,12 +318,18 @@ struct NodeLensflareCorona
 	var float Distance;
 	var RenderPoint2D Point;
 	var RenderScale2D Scale;
+	var Texture Texture;
+	var ERenderTextureMode Render;
 };
 
 
 //Editable properties (controller)
 var(Controller) NodeCorona Corona;
 var(Controller) NodeLensflare Lensflare;
+
+
+//Editable properties (presets)
+var(Presets) NodeLensflareEntry LensflarePresetSun[LENSFLARE_ENTRIES_COUNT];
 
 
 //Private properties
@@ -289,7 +351,6 @@ var private NodeLensflareEntry LensflareEntry13;
 var private NodeLensflareEntry LensflareEntry14;
 var private NodeLensflareEntry LensflareEntry15;
 var private NodeLensflareEntry LensflareEntries[LENSFLARE_ENTRIES_COUNT];
-var private NodeLensflareEntry LensflarePresetSunEntries[LENSFLARE_ENTRIES_COUNT];
 
 
 replication
@@ -318,13 +379,13 @@ event initialize()
 	
 	//lensflares
 	LensflareKind = Lensflare.Kind;
-	if (LensflareKind > LK_None) {
+	if (LensflareKind != LK_None) {
 		//prepare
 		for (i = 0; i < LENSFLARE_ENTRIES_COUNT; i++) {
 			//set
 			switch (LensflareKind) {
 				case LK_Sun:
-					LensflareEntries[i] = LensflarePresetSunEntries[i];
+					LensflareEntries[i] = LensflarePresetSun[i];
 					break;
 				default:
 					LensflareEntries[i] = Lensflare.Custom[i];
@@ -332,8 +393,8 @@ event initialize()
 			}
 			
 			//initialize
-			LensflareEntries[i].Glow = fclamp(LensflareEntries[i].Glow, 0.0, 1.0);
-			LensflareEntries[i].Position = fclamp(LensflareEntries[i].Position, -1.0, 1.0);
+			LensflareEntries[i].Glow.Value = fclamp(LensflareEntries[i].Glow.Value, 0.0, 1.0);
+			LensflareEntries[i].Position.Value = fclamp(LensflareEntries[i].Position.Value, -1.0, 1.0);
 			LensflareEntries[i].Size.Min = fmax(LensflareEntries[i].Size.Min, 0.0);
 			LensflareEntries[i].Size.Max = fmax(LensflareEntries[i].Size.Max, 0.0);
 			LensflareEntries[i].Degree.Min = fclamp(LensflareEntries[i].Degree.Min, 0.0, 1.0);
@@ -375,7 +436,7 @@ simulated event initializeNodesRender(RenderFrame frame)
 	frame.Canvas.Style = ERenderStyle.STY_Translucent;
 	
 	//lensflares
-	if (LensflareKind > LK_None) {
+	if (LensflareKind != LK_None) {
 		LensflareEntries[0] = LensflareEntry00;
 		LensflareEntries[1] = LensflareEntry01;
 		LensflareEntries[2] = LensflareEntry02;
@@ -490,7 +551,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	scale.V *= Corona.Scale.Value.V * Corona.Size;
 	
 	//gradient (size)
-	if (node.bLinked && Corona.Link.Gradient.Size.Mode > CLGM_None) {
+	if (node.bLinked && Corona.Link.Gradient.Size.Mode != CLGM_None) {
 		if (Corona.Link.Gradient.Size.Mode == CLGM_NonLinear) {
 			gSize = smerp(node.Position, Corona.Link.Gradient.Size.Value1, Corona.Link.Gradient.Size.Value2);
 		} else {
@@ -501,7 +562,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	}
 	
 	//gradient (scale)
-	if (node.bLinked && Corona.Link.Gradient.Scale.Mode > CLGM_None) {
+	if (node.bLinked && Corona.Link.Gradient.Scale.Mode != CLGM_None) {
 		if (Corona.Link.Gradient.Scale.Mode == CLGM_NonLinear) {
 			scale.U *= smerp(node.Position, Corona.Link.Gradient.Scale.Value1.U, Corona.Link.Gradient.Scale.Value2.U);
 			scale.V *= smerp(node.Position, Corona.Link.Gradient.Scale.Value1.V, Corona.Link.Gradient.Scale.Value2.V);
@@ -520,7 +581,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	opacity = frame.Opacity * node.Opacity * Corona.Glow;
 	
 	//gradient (glow)
-	if (node.bLinked && Corona.Link.Gradient.Glow.Mode > CLGM_None) {
+	if (node.bLinked && Corona.Link.Gradient.Glow.Mode != CLGM_None) {
 		if (Corona.Link.Gradient.Glow.Mode == CLGM_NonLinear) {
 			opacity *= smerp(node.Position, Corona.Link.Gradient.Glow.Value1, Corona.Link.Gradient.Glow.Value2);
 		} else {
@@ -545,7 +606,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	
 	//color
 	if (colorMode == CCM_Value) {
-		if (node.bLinked && Corona.Link.Gradient.Color.Mode > CLGM_None) {
+		if (node.bLinked && Corona.Link.Gradient.Color.Mode != CLGM_None) {
 			if (Corona.Link.Gradient.Color.Mode == CLGM_NonLinear) {
 				color.R = byte(
 					smerp(node.Position, Corona.Link.Gradient.Color.Value1.R, Corona.Link.Gradient.Color.Value2.R)
@@ -576,7 +637,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		} else if (colorMode == CCM_LightHS) {
 			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, 255);
 		} else if (colorMode == CCM_LightHue) {
-			if (node.bLinked && Corona.Link.Gradient.Saturation.Mode > CLGM_None) {
+			if (node.bLinked && Corona.Link.Gradient.Saturation.Mode != CLGM_None) {
 				if (Corona.Link.Gradient.Saturation.Mode == CLGM_NonLinear) {
 					saturation = byte(smerp(
 						node.Position, Corona.Link.Gradient.Saturation.Value1, Corona.Link.Gradient.Saturation.Value2
@@ -603,15 +664,17 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	
 	//draw
 	setRenderFrameNearestZ(frame, node.Distance);
-	drawSprite(frame, Corona.Texture.Value, c, point, scale, true, true, Corona.Texture.Mode, Corona.Texture.bSmooth);
+	drawSprite(frame, Corona.Texture.Value, c, point, scale, true, true, Corona.Texture.Render, Corona.Texture.bSmooth);
 	
 	//lensflares
-	if (LensflareKind > LK_None) {
+	if (LensflareKind != LK_None) {
 		lCorona.Color = color;
 		lCorona.Opacity = opacity;
 		lCorona.Distance = node.Distance;
 		lCorona.Point = point;
 		lCorona.Scale = scale;
+		lCorona.Texture = Corona.Texture.Value;
+		lCorona.Render = Corona.Texture.Render;
 		drawLensflares(lCorona, frame);
 	}
 }
@@ -619,13 +682,16 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame frame)
 {
 	//local
-	local byte i;
+	local int seed;
+	local byte i, j, count;
 	local RenderPoint2D point;
 	local RenderScale2D scale;
-	local float degree, opacity, alpha, size, f;
+	local float degree, position, absPosition, opacity, alpha, size, cAlpha, f;
 	local color colorMin, colorMax, c;
 	local vector vector, pointVector;
 	local NodeLensflareEntry entry;
+	local Texture texture;
+	local ERenderTextureMode renderMode;
 	
 	//check
 	if (LensflareKind == LK_None) {
@@ -651,141 +717,187 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 		//entry
 		entry = LensflareEntries[i];
 		
+		//texture
+		if (entry.Texture.Mode == LTM_Same) {
+			texture = corona.Texture;
+			renderMode = corona.Render;
+		} else {
+			texture = entry.Texture.Value;
+			renderMode = entry.Texture.Render;
+		}
+		
 		//check
-		if (
-			entry.Glow <= 0.0 || entry.Texture.Value == none || degree < entry.Degree.Min || 
-			degree > entry.Degree.Max
-		) {
+		if (texture == none || entry.Glow.Value <= 0.0 || degree < entry.Degree.Min || degree > entry.Degree.Max) {
 			continue;
 		}
 		
-		//opacity
-		opacity = corona.Opacity * entry.Glow;
-		if (degree < entry.Degree.FadeMin && entry.Degree.FadeMin > entry.Degree.Min) {
-			opacity *= (degree - entry.Degree.Min) / (entry.Degree.FadeMin - entry.Degree.Min);
-		} else if (degree > entry.Degree.FadeMax && entry.Degree.FadeMax < entry.Degree.Max) {
-			opacity *= 1.0 - (degree - entry.Degree.FadeMax) / (entry.Degree.Max - entry.Degree.FadeMax);
+		//seed and count
+		if (entry.Position.Mode == LPM_Distributed) {
+			seed = int(entry.Position.Distribution.Seed) * 256 + 1;
+			count = entry.Position.Distribution.Count;
+		} else {
+			count = 1;
 		}
 		
-		//opacity (check)
-		if (opacity <= 0.0) {
-			continue;
+		//iterate
+		for (j = 0; j < count; j++) {
+			//position
+			if (entry.Position.Mode == LPM_Distributed) {
+				position = fxrand(seed);
+				switch (entry.Position.Distribution.Mode) {
+					case LPDM_Back:
+						position = -position;
+						break;
+					case LPDM_Both:
+						position = position * 2.0 - 1.0;
+						break;
+				}
+			} else {
+				position = entry.Position.Value;
+			}
+			absPosition = abs(position);
+			
+			//opacity
+			opacity = corona.Opacity * entry.Glow.Value;
+			if (degree < entry.Degree.FadeMin && entry.Degree.FadeMin > entry.Degree.Min) {
+				opacity *= (degree - entry.Degree.Min) / (entry.Degree.FadeMin - entry.Degree.Min);
+			} else if (degree > entry.Degree.FadeMax && entry.Degree.FadeMax < entry.Degree.Max) {
+				opacity *= 1.0 - (degree - entry.Degree.FadeMax) / (entry.Degree.Max - entry.Degree.FadeMax);
+			}
+			
+			//opacity (multiplier)
+			if (entry.Glow.Multiplier.Position.Mode != LMM_None) {
+				opacity *= lensflareMultiplierAlpha(absPosition, entry.Glow.Multiplier.Position);
+			}
+			
+			//opacity (check)
+			if (opacity <= 0.0) {
+				continue;
+			}
+			
+			//alpha
+			alpha = (degree - entry.Degree.Min) / (entry.Degree.Max - entry.Degree.Min);
+			
+			//size
+			size = lerp(alpha, entry.Size.Min, entry.Size.Max);
+			if (entry.Size.Multiplier.Opacity.Mode != LMM_None) {
+				size *= lensflareMultiplierAlpha(opacity, entry.Size.Multiplier.Opacity);
+			}
+			if (entry.Size.Multiplier.Position.Mode != LMM_None) {
+				size *= lensflareMultiplierAlpha(absPosition, entry.Size.Multiplier.Position);
+			}
+			
+			//size (check)
+			if (size <= 0.0) {
+				continue;
+			}
+			
+			//scale
+			scale.U = size * lerp(alpha, entry.Scale.Min.U, entry.Scale.Max.U);
+			scale.V = size * lerp(alpha, entry.Scale.Min.V, entry.Scale.Max.V);
+			switch (entry.Size.Mode) {
+				case LSM_Fixed:
+					size = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
+						LENSFLARE_SIZE_FIXED / float(max(entry.Texture.Value.USize, entry.Texture.Value.VSize));
+					scale.U *= size;
+					scale.V *= size;
+					break;
+				case LSM_Relative:
+					scale.U *= corona.Scale.U;
+					scale.V *= corona.Scale.V;
+					break;
+			}
+			
+			//scale (check)
+			if (scale.U <= 0.0 || scale.V <= 0.0) {
+				continue;
+			}
+			
+			//color
+			switch (entry.Color.Mode) {
+				case LCM_Same:
+					colorMin = corona.Color;
+					colorMax = corona.Color;
+					break;
+				case LCM_Value:
+					colorMin = entry.Color.Min;
+					colorMax = entry.Color.Max;
+					break;
+				case LCM_Add:
+					colorMin.R = byte(min(int(corona.Color.R) + int(entry.Color.Min.R), 255));
+					colorMin.G = byte(min(int(corona.Color.G) + int(entry.Color.Min.G), 255));
+					colorMin.B = byte(min(int(corona.Color.B) + int(entry.Color.Min.B), 255));
+					colorMax.R = byte(min(int(corona.Color.R) + int(entry.Color.Max.R), 255));
+					colorMax.G = byte(min(int(corona.Color.G) + int(entry.Color.Max.G), 255));
+					colorMax.B = byte(min(int(corona.Color.B) + int(entry.Color.Max.B), 255));
+					break;
+				case LCM_Subtract:
+					colorMin.R = byte(max(int(corona.Color.R) - int(entry.Color.Min.R), 0));
+					colorMin.G = byte(max(int(corona.Color.G) - int(entry.Color.Min.G), 0));
+					colorMin.B = byte(max(int(corona.Color.B) - int(entry.Color.Min.B), 0));
+					colorMax.R = byte(max(int(corona.Color.R) - int(entry.Color.Max.R), 0));
+					colorMax.G = byte(max(int(corona.Color.G) - int(entry.Color.Max.G), 0));
+					colorMax.B = byte(max(int(corona.Color.B) - int(entry.Color.Max.B), 0));
+					break;
+				case LCM_Multiply:
+					f = 1.0 / 255.0;
+					colorMin.R = byte(fmin(float(corona.Color.R) * float(entry.Color.Min.R) * f, 255.0));
+					colorMin.G = byte(fmin(float(corona.Color.G) * float(entry.Color.Min.G) * f, 255.0));
+					colorMin.B = byte(fmin(float(corona.Color.B) * float(entry.Color.Min.B) * f, 255.0));
+					colorMax.R = byte(fmin(float(corona.Color.R) * float(entry.Color.Max.R) * f, 255.0));
+					colorMax.G = byte(fmin(float(corona.Color.G) * float(entry.Color.Max.G) * f, 255.0));
+					colorMax.B = byte(fmin(float(corona.Color.B) * float(entry.Color.Max.B) * f, 255.0));
+					break;
+				case LCM_Intersect:
+					colorMin.R = byte(int(corona.Color.R) & int(entry.Color.Min.R));
+					colorMin.G = byte(int(corona.Color.G) & int(entry.Color.Min.G));
+					colorMin.B = byte(int(corona.Color.B) & int(entry.Color.Min.B));
+					colorMax.R = byte(int(corona.Color.R) & int(entry.Color.Max.R));
+					colorMax.G = byte(int(corona.Color.G) & int(entry.Color.Max.G));
+					colorMax.B = byte(int(corona.Color.B) & int(entry.Color.Max.B));
+					break;
+				case LCM_Merge:
+					colorMin.R = byte(int(corona.Color.R) | int(entry.Color.Min.R));
+					colorMin.G = byte(int(corona.Color.G) | int(entry.Color.Min.G));
+					colorMin.B = byte(int(corona.Color.B) | int(entry.Color.Min.B));
+					colorMax.R = byte(int(corona.Color.R) | int(entry.Color.Max.R));
+					colorMax.G = byte(int(corona.Color.G) | int(entry.Color.Max.G));
+					colorMax.B = byte(int(corona.Color.B) | int(entry.Color.Max.B));
+					break;
+				case LCM_Exclude:
+					colorMin.R = byte(int(corona.Color.R) ^ int(entry.Color.Min.R));
+					colorMin.G = byte(int(corona.Color.G) ^ int(entry.Color.Min.G));
+					colorMin.B = byte(int(corona.Color.B) ^ int(entry.Color.Min.B));
+					colorMax.R = byte(int(corona.Color.R) ^ int(entry.Color.Max.R));
+					colorMax.G = byte(int(corona.Color.G) ^ int(entry.Color.Max.G));
+					colorMax.B = byte(int(corona.Color.B) ^ int(entry.Color.Max.B));
+					break;
+			}
+			
+			//color (alpha)
+			cAlpha = alpha;
+			if (entry.Color.Multiplier.Position.Mode != LMM_None) {
+				cAlpha *= lensflareMultiplierAlpha(absPosition, entry.Color.Multiplier.Position);
+			}
+			
+			//color (set)
+			c.R = byte(lerp(cAlpha, colorMin.R, colorMax.R) * opacity);
+			c.G = byte(lerp(cAlpha, colorMin.G, colorMax.G) * opacity);
+			c.B = byte(lerp(cAlpha, colorMin.B, colorMax.B) * opacity);
+			
+			//color (check)
+			if (c.R == 0 && c.G == 0 && c.B == 0) {
+				continue;
+			}
+			
+			//point
+			pointVector = vector * position;
+			point.X = corona.Point.X + pointVector.X;
+			point.Y = corona.Point.Y + pointVector.Y;
+			
+			//draw
+			drawSprite(frame, texture, c, point, scale, true, true, renderMode, entry.Texture.bSmooth);
 		}
-		
-		//alpha
-		alpha = (degree - entry.Degree.Min) / (entry.Degree.Max - entry.Degree.Min);
-		
-		//size
-		size = lerp(alpha, entry.Size.Min, entry.Size.Max);
-		if (entry.Size.OpacityRelativity.Mode > LSRM_None) {
-			size *= lensflareSizeRelativityAlpha(opacity, entry.Size.OpacityRelativity);
-		}
-		if (entry.Size.PositionRelativity.Mode > LSRM_None) {
-			size *= lensflareSizeRelativityAlpha(abs(entry.Position), entry.Size.OpacityRelativity);
-		}
-		
-		//size (check)
-		if (size <= 0.0) {
-			continue;
-		}
-		
-		//scale
-		scale.U = size * lerp(alpha, entry.Scale.Min.U, entry.Scale.Max.U);
-		scale.V = size * lerp(alpha, entry.Scale.Min.V, entry.Scale.Max.V);
-		switch (entry.Size.Mode) {
-			case LSM_Fixed:
-				size = fmin(frame.Canvas.ClipX - frame.Canvas.OrgX, frame.Canvas.ClipY - frame.Canvas.OrgY) * 
-					LENSFLARE_SIZE_FIXED / float(max(entry.Texture.Value.USize, entry.Texture.Value.VSize));
-				scale.U *= size;
-				scale.V *= size;
-				break;
-			case LSM_Relative:
-				scale.U *= corona.Scale.U;
-				scale.V *= corona.Scale.V;
-				break;
-		}
-		
-		//scale (check)
-		if (scale.U <= 0.0 || scale.V <= 0.0) {
-			continue;
-		}
-		
-		//color
-		switch (entry.Color.Mode) {
-			case LCM_Same:
-				colorMin = corona.Color;
-				colorMax = corona.Color;
-				break;
-			case LCM_Value:
-				colorMin = entry.Color.Min;
-				colorMax = entry.Color.Max;
-				break;
-			case LCM_Add:
-				colorMin.R = byte(min(int(corona.Color.R) + int(entry.Color.Min.R), 255));
-				colorMin.G = byte(min(int(corona.Color.G) + int(entry.Color.Min.G), 255));
-				colorMin.B = byte(min(int(corona.Color.B) + int(entry.Color.Min.B), 255));
-				colorMax.R = byte(min(int(corona.Color.R) + int(entry.Color.Max.R), 255));
-				colorMax.G = byte(min(int(corona.Color.G) + int(entry.Color.Max.G), 255));
-				colorMax.B = byte(min(int(corona.Color.B) + int(entry.Color.Max.B), 255));
-				break;
-			case LCM_Subtract:
-				colorMin.R = byte(max(int(corona.Color.R) - int(entry.Color.Min.R), 0));
-				colorMin.G = byte(max(int(corona.Color.G) - int(entry.Color.Min.G), 0));
-				colorMin.B = byte(max(int(corona.Color.B) - int(entry.Color.Min.B), 0));
-				colorMax.R = byte(max(int(corona.Color.R) - int(entry.Color.Max.R), 0));
-				colorMax.G = byte(max(int(corona.Color.G) - int(entry.Color.Max.G), 0));
-				colorMax.B = byte(max(int(corona.Color.B) - int(entry.Color.Max.B), 0));
-				break;
-			case LCM_Multiply:
-				f = 1.0 / 255.0;
-				colorMin.R = byte(fmin(float(corona.Color.R) * float(entry.Color.Min.R) * f, 255.0));
-				colorMin.G = byte(fmin(float(corona.Color.G) * float(entry.Color.Min.G) * f, 255.0));
-				colorMin.B = byte(fmin(float(corona.Color.B) * float(entry.Color.Min.B) * f, 255.0));
-				colorMax.R = byte(fmin(float(corona.Color.R) * float(entry.Color.Max.R) * f, 255.0));
-				colorMax.G = byte(fmin(float(corona.Color.G) * float(entry.Color.Max.G) * f, 255.0));
-				colorMax.B = byte(fmin(float(corona.Color.B) * float(entry.Color.Max.B) * f, 255.0));
-				break;
-			case LCM_Intersect:
-				colorMin.R = byte(int(corona.Color.R) & int(entry.Color.Min.R));
-				colorMin.G = byte(int(corona.Color.G) & int(entry.Color.Min.G));
-				colorMin.B = byte(int(corona.Color.B) & int(entry.Color.Min.B));
-				colorMax.R = byte(int(corona.Color.R) & int(entry.Color.Max.R));
-				colorMax.G = byte(int(corona.Color.G) & int(entry.Color.Max.G));
-				colorMax.B = byte(int(corona.Color.B) & int(entry.Color.Max.B));
-				break;
-			case LCM_Merge:
-				colorMin.R = byte(int(corona.Color.R) | int(entry.Color.Min.R));
-				colorMin.G = byte(int(corona.Color.G) | int(entry.Color.Min.G));
-				colorMin.B = byte(int(corona.Color.B) | int(entry.Color.Min.B));
-				colorMax.R = byte(int(corona.Color.R) | int(entry.Color.Max.R));
-				colorMax.G = byte(int(corona.Color.G) | int(entry.Color.Max.G));
-				colorMax.B = byte(int(corona.Color.B) | int(entry.Color.Max.B));
-				break;
-			case LCM_Exclude:
-				colorMin.R = byte(int(corona.Color.R) ^ int(entry.Color.Min.R));
-				colorMin.G = byte(int(corona.Color.G) ^ int(entry.Color.Min.G));
-				colorMin.B = byte(int(corona.Color.B) ^ int(entry.Color.Min.B));
-				colorMax.R = byte(int(corona.Color.R) ^ int(entry.Color.Max.R));
-				colorMax.G = byte(int(corona.Color.G) ^ int(entry.Color.Max.G));
-				colorMax.B = byte(int(corona.Color.B) ^ int(entry.Color.Max.B));
-				break;
-		}
-		c.R = byte(lerp(alpha, colorMin.R, colorMax.R) * opacity);
-		c.G = byte(lerp(alpha, colorMin.G, colorMax.G) * opacity);
-		c.B = byte(lerp(alpha, colorMin.B, colorMax.B) * opacity);
-		
-		//color (check)
-		if (c.R == 0 && c.G == 0 && c.B == 0) {
-			continue;
-		}
-		
-		//point
-		pointVector = vector * entry.Position;
-		point.X = corona.Point.X + pointVector.X;
-		point.Y = corona.Point.Y + pointVector.Y;
-		
-		//draw
-		drawSprite(frame, entry.Texture.Value, c, point, scale, true, true, entry.Texture.Mode, entry.Texture.bSmooth);
 	}
 }
 
@@ -871,15 +983,15 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 
 
 //Final static functions
-final static function float lensflareSizeRelativityAlpha(float alpha, NodeLensflareSizeRelativity relativity)
+final static function float lensflareMultiplierAlpha(float alpha, NodeLensflareMultiplier multiplier)
 {
-	if (relativity.Mode == LSRM_NonLinear) {
-		if (relativity.bInvert) {
+	if (multiplier.Mode == LMM_NonLinear) {
+		if (multiplier.bInvert) {
 			alpha = smerp(alpha, 1.0, 0.0);
 		} else {
 			alpha = smerp(alpha, 0.0, 1.0);
 		}
-	} else if (relativity.bInvert) {
+	} else if (multiplier.bInvert) {
 		alpha = 1.0 - alpha;
 	}
 	return alpha;
@@ -909,70 +1021,81 @@ defaultproperties
 	//Lensflare=(Custom[6]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
 	//Lensflare=(Custom[7]=(Glow=1.0,Size=(Min=1.0,Max=1.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0))))
 	
-	//privates (lensflare preset - sun)
-	LensflarePresetSunEntries(0)=(Glow=1.0,Position=0.0)
-	LensflarePresetSunEntries(0)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'CoronaSunQ'))
-	LensflarePresetSunEntries(0)=(Color=(Mode=LCM_Value,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSunEntries(0)=(Size=(Mode=LSM_Relative,Min=0.5,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(0)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
+	//editables (presets - sun lensflare)
+	LensflarePresetSun(0)=(Position=(Value=0.0))
+	LensflarePresetSun(0)=(Glow=(Value=1.0))
+	LensflarePresetSun(0)=(Texture=(bSmooth=true,Mode=LTM_Same))
+	LensflarePresetSun(0)=(Color=(Mode=LCM_Value,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetSun(0)=(Size=(Mode=LSM_Relative,Min=0.5,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(0)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
 	
-	LensflarePresetSunEntries(1)=(Glow=0.4,Position=0.0)
-	LensflarePresetSunEntries(1)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare4Q'))
-	LensflarePresetSunEntries(1)=(Color=(Mode=LCM_Same))
-	LensflarePresetSunEntries(1)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(1)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=0.75,Max=1.0))
+	LensflarePresetSun(1)=(Position=(Value=0.0))
+	LensflarePresetSun(1)=(Glow=(Value=0.4))
+	LensflarePresetSun(1)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare4Q'))
+	LensflarePresetSun(1)=(Color=(Mode=LCM_Same))
+	LensflarePresetSun(1)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(1)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=0.75,Max=1.0))
 	
-	LensflarePresetSunEntries(2)=(Glow=0.15,Position=0.0)
-	LensflarePresetSunEntries(2)=(Texture=(bSmooth=true,Mode=RTM_MirrorU,Value=Texture'Lensflare6D'))
-	LensflarePresetSunEntries(2)=(Color=(Mode=LCM_Same))
-	LensflarePresetSunEntries(2)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=2.0,V=1.0),Max=(U=4.0,V=1.0)))
-	LensflarePresetSunEntries(2)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
+	LensflarePresetSun(2)=(Position=(Value=0.0))
+	LensflarePresetSun(2)=(Glow=(Value=0.15))
+	LensflarePresetSun(2)=(Texture=(bSmooth=true,Render=RTM_MirrorU,Value=Texture'Lensflare6D'))
+	LensflarePresetSun(2)=(Color=(Mode=LCM_Same))
+	LensflarePresetSun(2)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=2.0,V=1.0),Max=(U=4.0,V=1.0)))
+	LensflarePresetSun(2)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
 	
-	LensflarePresetSunEntries(3)=(Glow=0.15,Position=0.0)
-	LensflarePresetSunEntries(3)=(Texture=(bSmooth=true,Mode=RTM_MirrorV,Value=Texture'Lensflare7D'))
-	LensflarePresetSunEntries(3)=(Color=(Mode=LCM_Same))
-	LensflarePresetSunEntries(3)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=1.0,V=2.0),Max=(U=1.0,V=4.0)))
-	LensflarePresetSunEntries(3)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
+	LensflarePresetSun(3)=(Position=(Value=0.0))
+	LensflarePresetSun(3)=(Glow=(Value=0.15))
+	LensflarePresetSun(3)=(Texture=(bSmooth=true,Render=RTM_MirrorV,Value=Texture'Lensflare7D'))
+	LensflarePresetSun(3)=(Color=(Mode=LCM_Same))
+	LensflarePresetSun(3)=(Size=(Mode=LSM_Fixed,Min=5.0,Max=5.0),Scale=(Min=(U=1.0,V=2.0),Max=(U=1.0,V=4.0)))
+	LensflarePresetSun(3)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.85,Max=1.0))
 	
-	LensflarePresetSunEntries(4)=(Glow=0.25,Position=0.2)
-	LensflarePresetSunEntries(4)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare8Q'))
-	LensflarePresetSunEntries(4)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSunEntries(4)=(Size=(Mode=LSM_Fixed,Min=1.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(4)=(Degree=(Min=0.2,FadeMin=0.4,FadeMax=0.7,Max=1.0))
+	LensflarePresetSun(4)=(Position=(Value=0.2))
+	LensflarePresetSun(4)=(Glow=(Value=0.25))
+	LensflarePresetSun(4)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare8Q'))
+	LensflarePresetSun(4)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
+	LensflarePresetSun(4)=(Size=(Mode=LSM_Fixed,Min=1.0,Max=10.0),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(4)=(Degree=(Min=0.2,FadeMin=0.4,FadeMax=0.7,Max=1.0))
 	
-	LensflarePresetSunEntries(5)=(Glow=0.2,Position=1.0)
-	LensflarePresetSunEntries(5)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
-	LensflarePresetSunEntries(5)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=192)))
-	LensflarePresetSunEntries(5)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.375),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(5)=(Degree=(Min=0.0,FadeMin=0.35,FadeMax=0.8,Max=0.9))
+	LensflarePresetSun(5)=(Position=(Value=1.0))
+	LensflarePresetSun(5)=(Glow=(Value=0.2))
+	LensflarePresetSun(5)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
+	LensflarePresetSun(5)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=192)))
+	LensflarePresetSun(5)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.375),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(5)=(Degree=(Min=0.0,FadeMin=0.35,FadeMax=0.8,Max=0.9))
 	
-	LensflarePresetSunEntries(6)=(Glow=0.2,Position=0.35)
-	LensflarePresetSunEntries(6)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare2Q'))
-	LensflarePresetSunEntries(6)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=255,B=192)))
-	LensflarePresetSunEntries(6)=(Size=(Mode=LSM_Fixed,Min=0.3,Max=1.5),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(6)=(Degree=(Min=0.05,FadeMin=0.35,FadeMax=0.7,Max=0.95))
+	LensflarePresetSun(6)=(Position=(Value=0.35))
+	LensflarePresetSun(6)=(Glow=(Value=0.2))
+	LensflarePresetSun(6)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare2Q'))
+	LensflarePresetSun(6)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=255,B=192)))
+	LensflarePresetSun(6)=(Size=(Mode=LSM_Fixed,Min=0.3,Max=1.5),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(6)=(Degree=(Min=0.05,FadeMin=0.35,FadeMax=0.7,Max=0.95))
 	
-	LensflarePresetSunEntries(7)=(Glow=0.75,Position=0.65)
-	LensflarePresetSunEntries(7)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
-	LensflarePresetSunEntries(7)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=192,G=255,B=192)))
-	LensflarePresetSunEntries(7)=(Size=(Mode=LSM_Fixed,Min=0.05,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(7)=(Degree=(Min=0.1,FadeMin=0.6,FadeMax=0.8,Max=0.95))
+	LensflarePresetSun(7)=(Position=(Value=0.65))
+	LensflarePresetSun(7)=(Glow=(Value=0.75))
+	LensflarePresetSun(7)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
+	LensflarePresetSun(7)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=192,G=255,B=192)))
+	LensflarePresetSun(7)=(Size=(Mode=LSM_Fixed,Min=0.05,Max=0.25),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(7)=(Degree=(Min=0.1,FadeMin=0.6,FadeMax=0.8,Max=0.95))
 	
-	LensflarePresetSunEntries(8)=(Glow=0.15,Position=0.75)
-	LensflarePresetSunEntries(8)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
-	LensflarePresetSunEntries(8)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=192),Max=(R=192,G=255,B=255)))
-	LensflarePresetSunEntries(8)=(Size=(Mode=LSM_Fixed,Min=0.4,Max=0.95),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(8)=(Degree=(Min=0.0,FadeMin=0.2,FadeMax=0.85,Max=0.95))
+	LensflarePresetSun(8)=(Position=(Value=0.75))
+	LensflarePresetSun(8)=(Glow=(Value=0.15))
+	LensflarePresetSun(8)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
+	LensflarePresetSun(8)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=192),Max=(R=192,G=255,B=255)))
+	LensflarePresetSun(8)=(Size=(Mode=LSM_Fixed,Min=0.4,Max=0.95),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(8)=(Degree=(Min=0.0,FadeMin=0.2,FadeMax=0.85,Max=0.95))
 	
-	LensflarePresetSunEntries(9)=(Glow=0.65,Position=0.8)
-	LensflarePresetSunEntries(9)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
-	LensflarePresetSunEntries(9)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=192,B=255)))
-	LensflarePresetSunEntries(9)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.4),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(9)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.5,Max=0.95))
+	LensflarePresetSun(9)=(Position=(Value=0.8))
+	LensflarePresetSun(9)=(Glow=(Value=0.65))
+	LensflarePresetSun(9)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare3Q'))
+	LensflarePresetSun(9)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=128,G=192,B=255)))
+	LensflarePresetSun(9)=(Size=(Mode=LSM_Fixed,Min=0.1,Max=0.4),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(9)=(Degree=(Min=0.0,FadeMin=0.1,FadeMax=0.5,Max=0.95))
 	
-	LensflarePresetSunEntries(10)=(Glow=0.17,Position=0.45)
-	LensflarePresetSunEntries(10)=(Texture=(bSmooth=true,Mode=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
-	LensflarePresetSunEntries(10)=(Color=(Mode=LCM_Multiply,Min=(R=192,G=255,B=255),Max=(R=128,G=255,B=192)))
-	LensflarePresetSunEntries(10)=(Size=(Mode=LSM_Fixed,Min=0.2,Max=0.75),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSunEntries(10)=(Degree=(Min=0.1,FadeMin=0.2,FadeMax=0.9,Max=1.0))
+	LensflarePresetSun(10)=(Position=(Value=0.45))
+	LensflarePresetSun(10)=(Glow=(Value=0.17))
+	LensflarePresetSun(10)=(Texture=(bSmooth=true,Render=RTM_MirrorQ,Value=Texture'Lensflare0Q'))
+	LensflarePresetSun(10)=(Color=(Mode=LCM_Multiply,Min=(R=192,G=255,B=255),Max=(R=128,G=255,B=192)))
+	LensflarePresetSun(10)=(Size=(Mode=LSM_Fixed,Min=0.2,Max=0.75),Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
+	LensflarePresetSun(10)=(Degree=(Min=0.1,FadeMin=0.2,FadeMax=0.9,Max=1.0))
 }

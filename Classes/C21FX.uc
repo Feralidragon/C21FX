@@ -292,6 +292,20 @@ final static function drawSprite(
 	}
 }
 
+/* https://en.wikipedia.org/wiki/Xorshift */
+final static function int xrand(out int seed)
+{
+	seed = seed ^ (seed << 13);
+	seed = seed ^ (seed >> 17);
+	seed = seed ^ (seed << 5);
+	return seed;
+}
+
+final static function float fxrand(out int seed)
+{
+	return float(xrand(seed)) / 4294967296.0 + 0.5;
+}
+
 
 
 defaultproperties
