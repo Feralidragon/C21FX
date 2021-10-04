@@ -22,9 +22,9 @@ enum ERenderPoint2DVisibility
 enum ERenderTextureMode
 {
 	RTM_Normal,
-	RTM_MirrorU,
-	RTM_MirrorV,
-	RTM_MirrorQ
+	RTM_DualU,
+	RTM_DualV,
+	RTM_Quad
 };
 
 
@@ -218,10 +218,11 @@ final static function color hsbToColor(byte hue, byte saturation, byte brightnes
 
 final static function drawSprite(
 	RenderFrame frame, Texture texture, color color, RenderPoint2D point, RenderScale2D scale, optional bool bCenterX,
-	optional bool bCenterY, optional ERenderTextureMode mode, optional bool bSmooth
+	optional bool bCenterY, optional ERenderTextureMode mode, optional bool bMirrorX, optional bool bMirrorY,
+	optional bool bSmooth
 ) {
 	//local
-	local float uSize, vSize, u, v, x, y, offset;
+	local float uSize, vSize, u, v, x, y, xL, yL, offsetU, offsetV;
 	
 	//check
 	if (texture == none) {
@@ -242,7 +243,7 @@ final static function drawSprite(
 	
 	//center X
 	if (bCenterX) {
-		if (mode == RTM_Normal || mode == RTM_MirrorV) {
+		if (mode == RTM_Normal || mode == RTM_DualV) {
 			x -= u * 0.5;
 		} else {
 			x -= u;
@@ -251,7 +252,7 @@ final static function drawSprite(
 	
 	//center Y
 	if (bCenterY) {
-		if (mode == RTM_Normal || mode == RTM_MirrorU) {
+		if (mode == RTM_Normal || mode == RTM_DualU) {
 			y -= v * 0.5;
 		} else {
 			y -= v;
@@ -260,9 +261,10 @@ final static function drawSprite(
 	
 	//bilinear offset
 	if (bSmooth) {
-		offset = 1.0;
-		uSize -= offset * 2.0;
-		vSize -= offset * 2.0;
+		offsetU = 1.0;
+		offsetV = 1.0;
+		uSize -= offsetU * 2.0;
+		vSize -= offsetV * 2.0;
 	}
 	
 	//normalize
@@ -272,38 +274,52 @@ final static function drawSprite(
 	y = int(y);
 	uSize = int(uSize);
 	vSize = int(vSize);
+	xL = u;
+	yL = v;
+	
+	//mirror X
+	if (bMirrorX) {
+		if (mode == RTM_DualU || mode == RTM_Quad) {
+			x += xL;
+			xL = -xL;
+		}
+		uSize = -uSize;
+		offsetU = -offsetU;
+	}
+	
+	//mirror Y
+	if (bMirrorY) {
+		if (mode == RTM_DualV || mode == RTM_Quad) {
+			y += yL;
+			yL = -yL;
+		}
+		vSize = -vSize;
+		offsetV = -offsetV;
+	}
 	
 	//draw
 	frame.Canvas.DrawColor = color;
 	frame.Canvas.bNoSmooth = !bSmooth;
 	frame.Canvas.setPos(x, y);
-	frame.Canvas.drawTile(texture, u, v, offset, offset, uSize, vSize);
-	if (mode == RTM_MirrorU || mode == RTM_MirrorQ) {
-		frame.Canvas.setPos(x + u, y);
-		frame.Canvas.drawTile(texture, u, v, -offset, offset, -uSize, vSize);
+	frame.Canvas.drawTile(texture, u, v, offsetU, offsetV, uSize, vSize);
+	if (mode == RTM_DualU || mode == RTM_Quad) {
+		frame.Canvas.setPos(x + xL, y);
+		frame.Canvas.drawTile(texture, u, v, -offsetU, offsetV, -uSize, vSize);
 	}
-	if (mode == RTM_MirrorV || mode == RTM_MirrorQ) {
-		frame.Canvas.setPos(x, y + v);
-		frame.Canvas.drawTile(texture, u, v, offset, -offset, uSize, -vSize);
+	if (mode == RTM_DualV || mode == RTM_Quad) {
+		frame.Canvas.setPos(x, y + yL);
+		frame.Canvas.drawTile(texture, u, v, offsetU, -offsetV, uSize, -vSize);
 	}
-	if (mode == RTM_MirrorQ) {
-		frame.Canvas.setPos(x + u, y + v);
-		frame.Canvas.drawTile(texture, u, v, -offset, -offset, -uSize, -vSize);
+	if (mode == RTM_Quad) {
+		frame.Canvas.setPos(x + xL, y + yL);
+		frame.Canvas.drawTile(texture, u, v, -offsetU, -offsetV, -uSize, -vSize);
 	}
 }
 
-/* https://en.wikipedia.org/wiki/Xorshift */
-final static function int xrand(out int seed)
+final static function float frandom(out int seed)
 {
-	seed = seed ^ (seed << 13);
-	seed = seed ^ (seed >> 17);
-	seed = seed ^ (seed << 5);
-	return seed;
-}
-
-final static function float fxrand(out int seed)
-{
-	return float(xrand(seed)) / 4294967296.0 + 0.5;
+	seed = seed * 214013 + 2531011;
+	return float((seed >> 16) & 0x7fff) / 32768.0;
 }
 
 
