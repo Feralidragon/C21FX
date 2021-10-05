@@ -1244,7 +1244,7 @@ defaultproperties
 	LensflarePresetSun(4)=(Degree=(Min=0.0,FadeMin=0.3,FadeMax=0.8,Max=1.0))
 	
 	LensflarePresetSun(5)=(Glow=(Value=0.3))
-	LensflarePresetSun(5)=(Position=(Mode=LPM_Distributed,Distribution=(Seed=78,Count=5,Mode=LPDM_Both)))
+	LensflarePresetSun(5)=(Position=(Mode=LPM_Distributed,Distribution=(Seed=78,Count=3,Mode=LPDM_Both)))
 	LensflarePresetSun(5)=(Texture=(Value=Texture'Lensflare1Q',Render=(bSmooth=true,Mode=RTM_Quad)))
 	LensflarePresetSun(5)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetSun(5)=(Color=(Random=(Mode=LCRM_HSB,Seed=61,HSB=(Min=(Saturation=64,Brightness=64),Max=(Hue=255,Saturation=255,Brightness=255)))))
