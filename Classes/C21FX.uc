@@ -316,10 +316,17 @@ final static function drawSprite(
 	}
 }
 
+final static function int iseed(byte seed)
+{
+	return int(seed) * 12347 + 193751;
+}
+
 final static function float frandom(out int seed)
 {
-	seed = seed * 214013 + 2531011;
-	return float((seed >> 16) & 0x7fff) / 32768.0;
+	seed = seed ^ (seed << 13);
+	seed = seed ^ (seed >> 17);
+	seed = seed ^ (seed << 5);
+	return (float(seed) / 2147483648.0 + 1.0) * 0.5;
 }
 
 
