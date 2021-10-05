@@ -1252,12 +1252,12 @@ defaultproperties
 	LensflarePresetSun(5)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(5)=(Degree=(Min=0.0,FadeMin=0.3,FadeMax=0.8,Max=1.0))
 	
-	LensflarePresetSun(6)=(Glow=(Value=0.35))
-	LensflarePresetSun(6)=(Position=(Mode=LPM_Distributed,Distribution=(Seed=80,Count=5,Mode=LPDM_Both)))
+	LensflarePresetSun(6)=(Glow=(Value=0.55))
+	LensflarePresetSun(6)=(Position=(Mode=LPM_Distributed,Distribution=(Seed=80,Count=7,Mode=LPDM_Both)))
 	LensflarePresetSun(6)=(Texture=(Value=Texture'Lensflare2Q',Render=(bSmooth=true,Mode=RTM_Quad)))
 	LensflarePresetSun(6)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetSun(6)=(Color=(Random=(Mode=LCRM_HSB,Seed=45,HSB=(Min=(Saturation=64,Brightness=64),Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(6)=(Size=(Min=0.01,Max=0.5,Random=(bEnabled=true,Seed=25))
+	LensflarePresetSun(6)=(Size=(Min=0.1,Max=0.7,Random=(bEnabled=true,Seed=25))
 	LensflarePresetSun(6)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(6)=(Degree=(Min=0.0,FadeMin=0.3,FadeMax=0.8,Max=1.0))
 	
@@ -1266,7 +1266,7 @@ defaultproperties
 	LensflarePresetSun(7)=(Texture=(Value=Texture'Lensflare4Q',Render=(bSmooth=true,Mode=RTM_Quad)))
 	LensflarePresetSun(7)=(Color=(Mode=LCM_Multiply,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetSun(7)=(Color=(Random=(Mode=LCRM_HSB,Seed=45,HSB=(Min=(Saturation=64,Brightness=64),Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(7)=(Size=(Min=0.025,Max=0.3,Random=(bEnabled=true,Seed=29))
+	LensflarePresetSun(7)=(Size=(Min=0.05,Max=0.4,Random=(bEnabled=true,Seed=29))
 	LensflarePresetSun(7)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(7)=(Degree=(Min=0.0,FadeMin=0.3,FadeMax=0.8,Max=1.0))
 	
@@ -1275,7 +1275,7 @@ defaultproperties
 	LensflarePresetSun(8)=(Texture=(Value=Texture'Lensflare4Q',Render=(bSmooth=true,Mode=RTM_Quad)))
 	LensflarePresetSun(8)=(Color=(Mode=LCM_Value,Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetSun(8)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(8)=(Size=(Min=0.01,Max=0.15,Random=(bEnabled=true,Seed=29))
+	LensflarePresetSun(8)=(Size=(Min=0.025,Max=0.2,Random=(bEnabled=true,Seed=29))
 	LensflarePresetSun(8)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(8)=(Degree=(Min=0.0,FadeMin=0.3,FadeMax=0.8,Max=1.0))
 	
