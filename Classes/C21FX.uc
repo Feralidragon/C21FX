@@ -218,7 +218,7 @@ final static function color hsbToColor(byte hue, byte saturation, byte brightnes
 
 final static function drawSprite(
 	RenderFrame frame, Texture texture, color color, RenderPoint2D point, RenderScale2D scale, optional bool bCenterX,
-	optional bool bCenterY, optional ERenderTextureMode mode, optional bool bMirrorX, optional bool bMirrorY,
+	optional bool bCenterY, optional ERenderTextureMode mode, optional bool bMirrorU, optional bool bMirrorV,
 	optional bool bSmooth
 ) {
 	//local
@@ -277,8 +277,8 @@ final static function drawSprite(
 	xL = u;
 	yL = v;
 	
-	//mirror X
-	if (bMirrorX) {
+	//mirror U
+	if (bMirrorU) {
 		if (mode == RTM_DualU || mode == RTM_Quad) {
 			x += xL;
 			xL = -xL;
@@ -287,8 +287,8 @@ final static function drawSprite(
 		offsetU = -offsetU;
 	}
 	
-	//mirror Y
-	if (bMirrorY) {
+	//mirror V
+	if (bMirrorV) {
 		if (mode == RTM_DualV || mode == RTM_Quad) {
 			y += yL;
 			yL = -yL;

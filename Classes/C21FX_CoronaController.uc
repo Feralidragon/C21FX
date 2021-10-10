@@ -177,8 +177,8 @@ enum ELensflareSizeMode
 //Structures
 struct NodeCoronaTextureRender
 {
-	var() bool bMirrorX;
-	var() bool bMirrorY;
+	var() bool bMirrorU;
+	var() bool bMirrorV;
 	var() bool bSmooth;
 	var() ERenderTextureMode Mode;
 };
@@ -297,8 +297,8 @@ struct NodeLensflareGlow
 
 struct NodeLensflareTextureRender
 {
-	var() bool bMirrorX;
-	var() bool bMirrorY;
+	var() bool bMirrorU;
+	var() bool bMirrorV;
 	var() bool bSmooth;
 	var() ERenderTextureMode Mode;
 };
@@ -490,7 +490,7 @@ event initialize()
 			continue;
 		}
 		
-		//limit
+		//limit and offset
 		switch (Lensflare.Presets[n]) {
 			case LP_Anamorphic:
 				limit = LENSFLARE_PRESET_ANAMORPHIC_ENTRIES_COUNT;
@@ -583,6 +583,14 @@ event initialize()
 				default:
 					LensflareEntries[j] = LensflarePresetCustom[i];
 					break;
+			}
+			
+			//check (entry)
+			if (
+				(LensflareEntries[j].Texture.Mode == LTM_Value && LensflareEntries[j].Texture.Value == none) || 
+				LensflareEntries[j].Glow.Value <= 0.0
+			) {
+				continue;
 			}
 			
 			//initialize
@@ -865,7 +873,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	setRenderFrameNearestZ(frame, node.Distance);
 	drawSprite(
 		frame, Corona.Texture.Value, c, point, scale, true, true, Corona.Texture.Render.Mode,
-		Corona.Texture.Render.bMirrorX, Corona.Texture.Render.bMirrorY, Corona.Texture.Render.bSmooth
+		Corona.Texture.Render.bMirrorU, Corona.Texture.Render.bMirrorV, Corona.Texture.Render.bSmooth
 	);
 	
 	//lensflares
@@ -894,7 +902,7 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 	local NodeLensflareEntry entry;
 	local Texture texture;
 	local ERenderTextureMode renderMode;
-	local bool bRenderMirrorX, bRenderMirrorY;
+	local bool bRenderMirrorU, bRenderMirrorV;
 	
 	//check
 	if (LensflareEntriesCount == 0) {
@@ -924,13 +932,13 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 		if (entry.Texture.Mode == LTM_Same) {
 			texture = corona.Texture;
 			renderMode = corona.Render.Mode;
-			bRenderMirrorX = corona.Render.bMirrorX;
-			bRenderMirrorY = corona.Render.bMirrorY;
+			bRenderMirrorU = corona.Render.bMirrorU;
+			bRenderMirrorV = corona.Render.bMirrorV;
 		} else {
 			texture = entry.Texture.Value;
 			renderMode = entry.Texture.Render.Mode;
-			bRenderMirrorX = entry.Texture.Render.bMirrorX;
-			bRenderMirrorY = entry.Texture.Render.bMirrorY;
+			bRenderMirrorU = entry.Texture.Render.bMirrorU;
+			bRenderMirrorV = entry.Texture.Render.bMirrorV;
 		}
 		
 		//vector
@@ -1173,16 +1181,16 @@ final simulated function drawLensflares(NodeLensflareCorona corona, RenderFrame 
 			//mirror
 			if (entry.Texture.Mode != LTM_Same) {
 				if (vector.X < 0.0) {
-					bRenderMirrorX = !bRenderMirrorX;
+					bRenderMirrorU = !bRenderMirrorU;
 				}
 				if (vector.Y < 0.0) {
-					bRenderMirrorY = !bRenderMirrorY;
+					bRenderMirrorV = !bRenderMirrorV;
 				}
 			}
 			
 			//draw
 			drawSprite(
-				frame, texture, c, point, scale, true, true, renderMode, bRenderMirrorX, bRenderMirrorY,
+				frame, texture, c, point, scale, true, true, renderMode, bRenderMirrorU, bRenderMirrorV,
 				entry.Texture.Render.bSmooth
 			);
 		}
@@ -1290,7 +1298,7 @@ final static function float lensflareMultiplierAlpha(float alpha, NodeLensflareM
 defaultproperties
 {
 	//editables (controller - corona)
-	Corona=(Texture=(Value=Texture'CoronaSun',Render=(bSmooth=true)),Size=1.0,Glow=1.0)
+	Corona=(Texture=(Value=Texture'Corona',Render=(bSmooth=true)),Size=1.0,Glow=1.0)
 	Corona=(Scale=(Value=(U=1.0,V=1.0)))
 	Corona=(Color=(Value=(R=255,G=255,B=255)))
 	Corona=(Link=(Density=1.0,Alignment=CLA_Center))
@@ -1303,7 +1311,7 @@ defaultproperties
 	LensflarePresetAnamorphic(0)=(Glow=(Value=0.25))
 	LensflarePresetAnamorphic(0)=(Position=(Distribution=(Count=1)))
 	LensflarePresetAnamorphic(0)=(Texture=(Value=Texture'Lensflare05D',Render=(bSmooth=true,Mode=RTM_DualU)))
-	LensflarePresetAnamorphic(0)=(Color=(Mode=LCM_Value,Min=(R=0,G=0,B=255),Max=(R=0,G=0,B=255)))
+	LensflarePresetAnamorphic(0)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetAnamorphic(0)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
 	LensflarePresetAnamorphic(0)=(Size=(Mode=LSM_Relative,Min=3.0,Max=3.0))
 	LensflarePresetAnamorphic(0)=(Scale=(Min=(U=1.5,V=1.0),Max=(U=3.0,V=1.0)))
@@ -1312,7 +1320,7 @@ defaultproperties
 	LensflarePresetAnamorphic(1)=(Glow=(Value=0.25))
 	LensflarePresetAnamorphic(1)=(Position=(Distribution=(Count=1)))
 	LensflarePresetAnamorphic(1)=(Texture=(Value=Texture'Lensflare06D',Render=(bSmooth=true,Mode=RTM_DualV)))
-	LensflarePresetAnamorphic(1)=(Color=(Mode=LCM_Value,Min=(R=0,G=0,B=255),Max=(R=0,G=0,B=255)))
+	LensflarePresetAnamorphic(1)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetAnamorphic(1)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
 	LensflarePresetAnamorphic(1)=(Size=(Mode=LSM_Relative,Min=3.0,Max=3.0))
 	LensflarePresetAnamorphic(1)=(Scale=(Min=(U=1.0,V=.75),Max=(U=1.0,V=1.5)))
@@ -1340,7 +1348,7 @@ defaultproperties
 	
 	LensflarePresetGlare(1)=(Glow=(Value=0.35))
 	LensflarePresetGlare(1)=(Position=(Value=-0.25,Axis=LPA_X,Distribution=(Count=1)))
-	LensflarePresetGlare(1)=(Texture=(Value=Texture'Lensflare09D',Render=(bSmooth=true,Mode=RTM_DualV,bMirrorX=true)))
+	LensflarePresetGlare(1)=(Texture=(Value=Texture'Lensflare09D',Render=(bSmooth=true,Mode=RTM_DualV,bMirrorU=true)))
 	LensflarePresetGlare(1)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetGlare(1)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
 	LensflarePresetGlare(1)=(Size=(Mode=LSM_Relative,Min=1.0,Max=3.0))
@@ -1358,7 +1366,7 @@ defaultproperties
 	
 	LensflarePresetGlare(3)=(Glow=(Value=0.35))
 	LensflarePresetGlare(3)=(Position=(Value=-0.25,Axis=LPA_Y,Distribution=(Count=1)))
-	LensflarePresetGlare(3)=(Texture=(Value=Texture'Lensflare10D',Render=(bSmooth=true,Mode=RTM_DualU,bMirrorY=true)))
+	LensflarePresetGlare(3)=(Texture=(Value=Texture'Lensflare10D',Render=(bSmooth=true,Mode=RTM_DualU,bMirrorV=true)))
 	LensflarePresetGlare(3)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetGlare(3)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
 	LensflarePresetGlare(3)=(Size=(Mode=LSM_Relative,Min=1.0,Max=3.0))
@@ -1377,7 +1385,7 @@ defaultproperties
 	
 	LensflarePresetGlareSpectral(1)=(Glow=(Value=0.35))
 	LensflarePresetGlareSpectral(1)=(Position=(Value=-0.25,Axis=LPA_X,Distribution=(Count=1)))
-	LensflarePresetGlareSpectral(1)=(Texture=(Value=Texture'Lensflare11D',Render=(bSmooth=true,Mode=RTM_DualV,bMirrorX=true)))
+	LensflarePresetGlareSpectral(1)=(Texture=(Value=Texture'Lensflare11D',Render=(bSmooth=true,Mode=RTM_DualV,bMirrorU=true)))
 	LensflarePresetGlareSpectral(1)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetGlareSpectral(1)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
 	LensflarePresetGlareSpectral(1)=(Size=(Mode=LSM_Relative,Min=1.0,Max=3.0))
@@ -1395,7 +1403,7 @@ defaultproperties
 	
 	LensflarePresetGlareSpectral(3)=(Glow=(Value=0.35))
 	LensflarePresetGlareSpectral(3)=(Position=(Value=-0.25,Axis=LPA_Y,Distribution=(Count=1)))
-	LensflarePresetGlareSpectral(3)=(Texture=(Value=Texture'Lensflare12D',Render=(bSmooth=true,Mode=RTM_DualU,bMirrorY=true)))
+	LensflarePresetGlareSpectral(3)=(Texture=(Value=Texture'Lensflare12D',Render=(bSmooth=true,Mode=RTM_DualU,bMirrorV=true)))
 	LensflarePresetGlareSpectral(3)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
 	LensflarePresetGlareSpectral(3)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
 	LensflarePresetGlareSpectral(3)=(Size=(Mode=LSM_Relative,Min=1.0,Max=3.0))
