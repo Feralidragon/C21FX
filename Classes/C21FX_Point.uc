@@ -12,7 +12,7 @@ var bool bTraversing;
 
 
 //Private properties
-var private C21FX_Link rootLink;
+var private C21FX_Link RootLink;
 var private bool bLinked;
 
 
@@ -24,12 +24,12 @@ final simulated function bool isLinked()
 
 final simulated function bool hasLinks()
 {
-	return rootLink != none;
+	return RootLink != none;
 }
 
 final simulated function C21FX_Link getRootLink()
 {
-	return rootLink;
+	return RootLink;
 }
 
 final simulated function addLink(C21FX_Link link)
@@ -37,8 +37,8 @@ final simulated function addLink(C21FX_Link link)
 	if (link != none && link.Point1 != none && link.Point2 != none) {
 		link.Point1.bLinked = true;
 		link.Point2.bLinked = true;
-		link.NextLink = rootLink;
-		rootLink = link;
+		link.NextLink = RootLink;
+		RootLink = link;
 	}
 }
 

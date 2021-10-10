@@ -7,7 +7,7 @@
 class C21FX_Manager extends C21FX_Engine nousercreate;
 
 //Private properties
-var private float deltaTime;
+var private float DeltaTime;
 
 
 //Events
@@ -20,7 +20,7 @@ event postBeginPlay()
 //Simulated events
 simulated event tick(float delta)
 {
-	deltaTime = delta;
+	DeltaTime = delta;
 }
 
 
@@ -35,7 +35,7 @@ final simulated function render(Canvas canvas)
 	local rotator viewRotation;
 	
 	//check
-	if (canvas == none || deltaTime <= 0.0) {
+	if (canvas == none || DeltaTime <= 0.0) {
 		return;
 	}
 	
@@ -56,7 +56,7 @@ final simulated function render(Canvas canvas)
 		
 		//frame
 		frame.Canvas = canvas;
-		frame.Delta = deltaTime;
+		frame.Delta = DeltaTime;
 		frame.Opacity = 1.0;
 		frame.View.Actor = viewActor;
 		frame.View.Location = viewLocation;

@@ -41,9 +41,9 @@ var(Controller) NodeVisibility Visibility;
 
 
 //Private properties
-var private bool initializedNodes;
-var private C21FX_Node rootNode;
-var private C21FX_Point rootPoint;
+var private bool InitializedNodes;
+var private C21FX_Node RootNode;
+var private C21FX_Point RootPoint;
 
 
 replication
@@ -118,10 +118,10 @@ final simulated function drawFrame(RenderFrame frame)
 	
 	//nodes
 	initializeNodes();
-	drawNodes(rootNode, frame);
+	drawNodes(RootNode, frame);
 	
 	//points
-	for (point = rootPoint; point != none; point = point.NextPoint) {
+	for (point = RootPoint; point != none; point = point.NextPoint) {
 		drawLinks(point, frame);
 	}
 }
@@ -196,7 +196,7 @@ final simulated function initializeNodes()
 	local C21FX_Point point;
 	
 	//check
-	if (initializedNodes) {
+	if (InitializedNodes) {
 		return;
 	}
 	
@@ -209,17 +209,17 @@ final simulated function initializeNodes()
 				if (point != none) {
 					initializeLinks(point);
 					if (point.isLinked()) {
-						point.NextPoint = rootPoint;
-						rootPoint = point;
+						point.NextPoint = RootPoint;
+						RootPoint = point;
 						continue;
 					}
 				}
 				
 				//node
-				rootNode = generateNode(rootNode, actor);
+				RootNode = generateNode(RootNode, actor);
 			}
 		}
-		initializedNodes = true;
+		InitializedNodes = true;
 	}
 }
 
