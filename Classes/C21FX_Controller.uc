@@ -506,6 +506,10 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 			) {
 				return true;
 			}
+			
+			//collision
+			traceStart += (fmin(traceActor.CollisionHeight, traceActor.CollisionRadius) + 1.0) * 
+				normal(nodeLocation - traceStart);
 		}
 	}
 	
