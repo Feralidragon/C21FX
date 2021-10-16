@@ -8,11 +8,9 @@ class C21FX_CoronaController extends C21FX_Controller;
 
 //Import directives (textures - coronas SD)
 #exec TEXTURE IMPORT NAME=Corona FILE=Textures/Coronas/SD/Corona.bmp GROUP=Coronas MIPS=OFF LODSET=0
-#exec TEXTURE IMPORT NAME=CoronaSun FILE=Textures/Coronas/SD/CoronaSun.bmp GROUP=Coronas MIPS=OFF LODSET=0
 
 //Import directives (textures - coronas HD)
 #exec TEXTURE MERGECOMPRESSED NAME=Corona FILE=Textures/Coronas/HD/Corona.png GROUP=Coronas MIPS=OFF LODSET=0 FORMAT=BC7
-#exec TEXTURE MERGECOMPRESSED NAME=CoronaSun FILE=Textures/Coronas/HD/CoronaSun.png GROUP=Coronas MIPS=OFF LODSET=0 FORMAT=BC7
 
 //Import directives (textures - lensflares SD)
 #exec TEXTURE IMPORT NAME=Lensflare00Q FILE=Textures/Lensflares/SD/Lensflare00Q.bmp GROUP=Lensflares MIPS=OFF LODSET=0
@@ -53,6 +51,7 @@ const LENSFLARE_ENTRIES_COUNT = 16;
 const LENSFLARE_PRESETS_COUNT = 8;
 const LENSFLARE_PRESET_ANAMORPHIC_ENTRIES_COUNT = 2;
 const LENSFLARE_PRESET_GLARE_ENTRIES_COUNT = 4;
+const LENSFLARE_PRESET_SUN_ENTRIES_COUNT = 10;
 const LENSFLARE_PRESET_SUN_SPECTRAL_ENTRIES_COUNT = 4;
 const LENSFLARE_PRESET_SUN_ANAMORPHIC_ENTRIES_COUNT = 3;
 const LENSFLARE_PRESET_SUN_LITE_ENTRIES_COUNT = 2;
@@ -434,7 +433,7 @@ var(Presets) NodeLensflareEntry LensflarePresetGlareSpectral[LENSFLARE_PRESET_GL
 var(Presets) NodeLensflareEntry LensflarePresetGlow;
 var(Presets) NodeLensflareEntry LensflarePresetRing;
 var(Presets) NodeLensflareEntry LensflarePresetSpectral;
-var(Presets) NodeLensflareEntry LensflarePresetSun[LENSFLARE_ENTRIES_COUNT];
+var(Presets) NodeLensflareEntry LensflarePresetSun[LENSFLARE_PRESET_SUN_ENTRIES_COUNT];
 var(Presets) NodeLensflareEntry LensflarePresetCustom[LENSFLARE_ENTRIES_COUNT];
 
 
@@ -522,6 +521,9 @@ event initialize()
 			case LP_Ring:
 			case LP_Spectral:
 				limit = 1;
+				break;
+			case LP_Sun:
+				limit = LENSFLARE_PRESET_SUN_ENTRIES_COUNT;
 				break;
 			case LP_SunSpectral:
 				limit = LENSFLARE_PRESET_SUN_SPECTRAL_ENTRIES_COUNT;
@@ -1533,60 +1535,6 @@ defaultproperties
 	LensflarePresetSun(9)=(Size=(Min=1.0,Max=4.0,Random=(bEnabled=true,Seed=146)))
 	LensflarePresetSun(9)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
 	LensflarePresetSun(9)=(Degree=(Min=0.0,FadeMin=0.3,FadeMax=0.8,Max=1.0))
-	
-	LensflarePresetSun(10)=(Glow=(Value=1.0))
-	LensflarePresetSun(10)=(Position=(Distribution=(Count=1)))
-	LensflarePresetSun(10)=(Texture=(Render=(bSmooth=true)))
-	LensflarePresetSun(10)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSun(10)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(10)=(Size=(Min=1.0,Max=1.0))
-	LensflarePresetSun(10)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSun(10)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
-	
-	LensflarePresetSun(11)=(Glow=(Value=1.0))
-	LensflarePresetSun(11)=(Position=(Distribution=(Count=1)))
-	LensflarePresetSun(11)=(Texture=(Render=(bSmooth=true)))
-	LensflarePresetSun(11)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSun(11)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(11)=(Size=(Min=1.0,Max=1.0))
-	LensflarePresetSun(11)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSun(11)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
-	
-	LensflarePresetSun(12)=(Glow=(Value=1.0))
-	LensflarePresetSun(12)=(Position=(Distribution=(Count=1)))
-	LensflarePresetSun(12)=(Texture=(Render=(bSmooth=true)))
-	LensflarePresetSun(12)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSun(12)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(12)=(Size=(Min=1.0,Max=1.0))
-	LensflarePresetSun(12)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSun(12)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
-	
-	LensflarePresetSun(13)=(Glow=(Value=1.0))
-	LensflarePresetSun(13)=(Position=(Distribution=(Count=1)))
-	LensflarePresetSun(13)=(Texture=(Render=(bSmooth=true)))
-	LensflarePresetSun(13)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSun(13)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(13)=(Size=(Min=1.0,Max=1.0))
-	LensflarePresetSun(13)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSun(13)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
-	
-	LensflarePresetSun(14)=(Glow=(Value=1.0))
-	LensflarePresetSun(14)=(Position=(Distribution=(Count=1)))
-	LensflarePresetSun(14)=(Texture=(Render=(bSmooth=true)))
-	LensflarePresetSun(14)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSun(14)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(14)=(Size=(Min=1.0,Max=1.0))
-	LensflarePresetSun(14)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSun(14)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
-	
-	LensflarePresetSun(15)=(Glow=(Value=1.0))
-	LensflarePresetSun(15)=(Position=(Distribution=(Count=1)))
-	LensflarePresetSun(15)=(Texture=(Render=(bSmooth=true)))
-	LensflarePresetSun(15)=(Color=(Min=(R=255,G=255,B=255),Max=(R=255,G=255,B=255)))
-	LensflarePresetSun(15)=(Color=(Random=(HSB=(Max=(Hue=255,Saturation=255,Brightness=255)))))
-	LensflarePresetSun(15)=(Size=(Min=1.0,Max=1.0))
-	LensflarePresetSun(15)=(Scale=(Min=(U=1.0,V=1.0),Max=(U=1.0,V=1.0)))
-	LensflarePresetSun(15)=(Degree=(Min=0.0,FadeMin=0.0,FadeMax=1.0,Max=1.0))
 	
 	//editables (presets - custom lensflares)
 	LensflarePresetCustom(0)=(Glow=(Value=1.0))
