@@ -6,6 +6,11 @@
 
 class C21FX_Controller extends C21FX_Editor abstract;
 
+//Constants
+const BACKDROP_TRACE_DISTANCE = 100000.0;
+const BACKDROP_TRACE_HIT_LEEWAY = 8.0;
+
+
 //Enumerations
 enum EVisibilityOcclusionType
 {
@@ -31,8 +36,32 @@ struct NodeVisibility
 	var() bool bZoneExclusive;
 	var() EVisibilityOcclusionType OcclusionType;
 	var() EVisibilityActorSync ActorSync;
-	var() string TransparencyTag;
+	var() string TransparencySubtag;
+	var() string BackdropZoneSubtag;
 };
+
+struct NodeBackdropEdgeAxis
+{
+	var float Min;
+	var float Max;
+};
+
+struct NodeBackdropEdge
+{
+	var NodeBackdropEdgeAxis X;
+	var NodeBackdropEdgeAxis Y;
+	var NodeBackdropEdgeAxis Z;
+};
+
+struct NodeBackdrop
+{
+	var ZoneInfo Zone;
+	var NodeBackdropEdge Edge;
+};
+
+
+//Programmable properties
+var bool bBackdropEnabled;
 
 
 //Editable properties (controller)
@@ -44,12 +73,14 @@ var(Controller) NodeVisibility Visibility;
 var private bool InitializedNodes;
 var private C21FX_Node RootNode;
 var private C21FX_Point RootPoint;
+var private NodeBackdrop Backdrops[32];
+var private byte BackdropsCount;
 
 
 replication
 {
 	reliable if (Role == ROLE_Authority)
-		NodesTag, Visibility;
+		NodesTag, Visibility, Backdrops, BackdropsCount;
 }
 
 
@@ -99,11 +130,88 @@ event postBeginPlay()
 		}
 	}
 	
-	//transparency
-	Visibility.TransparencyTag = caps(Visibility.TransparencyTag);
+	//subtags
+	Visibility.TransparencySubtag = caps(Visibility.TransparencySubtag);
+	Visibility.BackdropZoneSubtag = caps(Visibility.BackdropZoneSubtag);
+	
+	//backdrops
+	initializeBackdrops();
 	
 	//initialize
 	initialize();
+}
+
+
+//Final functions
+final function initializeBackdrops()
+{
+	//local
+	local ZoneInfo zone;
+	local vector vectors[6], hitLocation, hitNormal, traceEnd, edgeLocation;
+	local byte i;
+	
+	//check
+	if (!bBackdropEnabled) {
+		return;
+	}
+	
+	//vectors
+	vectors[0] = vect(1.0, 0.0, 0.0);
+	vectors[1] = vect(-1.0, 0.0, 0.0);
+	vectors[2] = vect(0.0, 1.0, 0.0);
+	vectors[3] = vect(0.0, -1.0, 0.0);
+	vectors[4] = vect(0.0, 0.0, 1.0);
+	vectors[5] = vect(0.0, 0.0, -1.0);
+	
+	//zones
+	foreach AllActors(class'ZoneInfo', zone) {
+		//check
+		if (SkyZoneInfo(zone) != none || instr(caps(zone.Tag), Visibility.BackdropZoneSubtag) == -1) {
+			continue;
+		}
+		
+		//zone
+		Backdrops[BackdropsCount].Zone = zone;
+		
+		//trace
+		for (i = 0; i < arrayCount(vectors); i++) {
+			//trace
+			traceEnd = zone.Location + vectors[i] * BACKDROP_TRACE_DISTANCE;
+			if (trace(hitLocation, hitNormal, traceEnd, zone.Location) != none) {
+				edgeLocation = hitLocation;
+			} else {
+				edgeLocation = traceEnd;
+			}
+			
+			//edge
+			switch (i) {
+				case 0:
+					Backdrops[BackdropsCount].Edge.X.Max = edgeLocation.X;
+					break;
+				case 1:
+					Backdrops[BackdropsCount].Edge.X.Min = edgeLocation.X;
+					break;
+				case 2:
+					Backdrops[BackdropsCount].Edge.Y.Max = edgeLocation.Y;
+					break;
+				case 3:
+					Backdrops[BackdropsCount].Edge.Y.Min = edgeLocation.Y;
+					break;
+				case 4:
+					Backdrops[BackdropsCount].Edge.Z.Max = edgeLocation.Z;
+					break;
+				case 5:
+					Backdrops[BackdropsCount].Edge.Z.Min = edgeLocation.Z;
+					break;
+			}
+		}
+		
+		//finalize
+		BackdropsCount++;
+		if (BackdropsCount >= arrayCount(Backdrops)) {
+			break;
+		}
+	}
 }
 
 
@@ -143,7 +251,7 @@ final simulated function drawNodes(C21FX_Node rootNode, RenderFrame frame)
 		frame.Opacity = frameOpacity;
 		
 		//distance
-		node.Distance = vsize(node.Location - frame.View.Location);
+		node.Distance = vsize(node.Location - getNodeViewLocation(node, frame));
 		if (node.Distance > Visibility.ViewDistance) {
 			continue;
 		} else if (viewDistanceDelta > 0.0 && node.Distance >= Visibility.ViewFadeDistance) {
@@ -221,6 +329,14 @@ final simulated function initializeNodes()
 		}
 		InitializedNodes = true;
 	}
+}
+
+final simulated function vector getNodeViewLocation(C21FX_Node node, RenderFrame frame)
+{
+	if (bBackdropEnabled && node.Actor != none && SkyZoneInfo(node.Actor.Region.Zone) != none) {
+		return node.Actor.Region.Zone.Location;
+	}
+	return frame.View.Location;
 }
 
 final simulated function C21FX_Node generateNode(C21FX_Node rootNode, Actor actor)
@@ -304,13 +420,16 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 	//zone
 	if (
 		Visibility.bZoneExclusive && node.Actor != none && 
-		node.Actor.Region.ZoneNumber != frame.View.Actor.Region.ZoneNumber
+		node.Actor.Region.ZoneNumber != frame.View.Actor.Region.ZoneNumber && (
+			!bBackdropEnabled || SkyZoneInfo(node.Actor.Region.Zone) == none || 
+			node.Actor.Region.Zone != frame.View.Actor.Region.Zone.SkyZone
+		)
 	) {
 		return false;
 	}
 	
 	//point
-	point = locationToRenderPoint2D(node.Location, frame, pointVisibility);
+	point = getNodeRenderPoint2D(node, frame, pointVisibility);
 	if (pointVisibility != RP2DV_Visible) {
 		return false;
 	}
@@ -324,11 +443,30 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 	return true;
 }
 
+final simulated function RenderPoint2D getNodeRenderPoint2D(
+	C21FX_Node node, RenderFrame frame, out ERenderPoint2DVisibility visibility
+) {
+	//local
+	local vector location;
+	
+	//location
+	if (bBackdropEnabled && node.Actor != none && SkyZoneInfo(node.Actor.Region.Zone) != none) {
+		location = frame.View.Location + (
+			(node.Location - node.Actor.Region.Zone.Location) << node.Actor.Region.Zone.Rotation
+		);
+	} else {
+		location = node.Location;
+	}
+	
+	//return
+	return locationToRenderPoint2D(location, frame, visibility);
+}
+
 final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 {
 	//local
 	local Actor traceActor, mTraceActor;
-	local vector hitLocation, hitNormal, traceStart, mHitLocation, mHitNormal;
+	local vector nodeLocation, hitLocation, hitNormal, traceStart, mHitLocation, mHitNormal;
 	local bool bTraceActors;
 	
 	//check
@@ -340,16 +478,17 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 	traceActor = frame.View.Actor;
 	traceStart = frame.View.Location;
 	bTraceActors = Visibility.OcclusionType == VOT_All;
+	nodeLocation = getNodeOcclusionLocation(node, frame);
 	while (traceActor != none) {
-		traceActor = traceActor.trace(hitLocation, hitNormal, node.Location, traceStart, bTraceActors);
+		traceActor = traceActor.trace(hitLocation, hitNormal, nodeLocation, traceStart, bTraceActors);
 		if (traceActor != none) {
 			//next
 			traceStart = hitLocation;
 			
 			//glass
-			if (instr(caps(traceActor.Tag), Visibility.TransparencyTag) != -1) {
+			if (instr(caps(traceActor.Tag), Visibility.TransparencySubtag) != -1) {
 				if (Mover(traceActor) != none) {
-					mTraceActor = trace(mHitLocation, mHitNormal, hitLocation, node.Location);
+					mTraceActor = trace(mHitLocation, mHitNormal, hitLocation, nodeLocation);
 					if (mTraceActor != traceActor) {
 						return true;
 					}
@@ -374,12 +513,57 @@ final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
 	return false;
 }
 
+final simulated function vector getNodeOcclusionLocation(C21FX_Node node, RenderFrame frame)
+{
+	//local
+	local vector location, hitLocation, hitNormal, hitLocationMin;
+	local NodeBackdrop backdrop;
+	local byte i;
+	
+	//backdrop
+	if (bBackdropEnabled && node.Actor != none && SkyZoneInfo(node.Actor.Region.Zone) != none) {
+		//location
+		location = frame.View.Location + BACKDROP_TRACE_DISTANCE * normal(
+			(node.Location - node.Actor.Region.Zone.Location) << node.Actor.Region.Zone.Rotation
+		);
+		
+		//trace
+		if (BackdropsCount > 0 && trace(hitLocation, hitNormal, location, frame.View.Location) != none) {
+			hitLocationMin = hitLocation + BACKDROP_TRACE_HIT_LEEWAY * hitNormal;
+			for (i = 0; i < BackdropsCount; i++) {
+				backdrop = Backdrops[i];
+				if (
+					backdrop.Zone.SkyZone == node.Actor.Region.Zone && 
+					hitLocationMin.X >= backdrop.Edge.X.Min && hitLocationMin.X <= backdrop.Edge.X.Max && 
+					hitLocationMin.Y >= backdrop.Edge.Y.Min && hitLocationMin.Y <= backdrop.Edge.Y.Max && 
+					hitLocationMin.Z >= backdrop.Edge.Z.Min && hitLocationMin.Z <= backdrop.Edge.Z.Max && (
+						abs(hitLocation.X - backdrop.Edge.X.Min) <= BACKDROP_TRACE_HIT_LEEWAY || 
+						abs(hitLocation.X - backdrop.Edge.X.Max) <= BACKDROP_TRACE_HIT_LEEWAY || 
+						abs(hitLocation.Y - backdrop.Edge.Y.Min) <= BACKDROP_TRACE_HIT_LEEWAY || 
+						abs(hitLocation.Y - backdrop.Edge.Y.Max) <= BACKDROP_TRACE_HIT_LEEWAY || 
+						abs(hitLocation.Z - backdrop.Edge.Z.Min) <= BACKDROP_TRACE_HIT_LEEWAY || 
+						abs(hitLocation.Z - backdrop.Edge.Z.Max) <= BACKDROP_TRACE_HIT_LEEWAY
+					)
+				) {
+					return hitLocationMin;
+				}
+			}
+		}
+		
+		//return
+		return location;
+	}
+	
+	//return
+	return node.Location;
+}
+
 
 
 defaultproperties
 {
 	//editables (controller)
-	Visibility=(ViewDistance=20000,ViewFadeDistance=18000,TransparencyTag="glass")
+	Visibility=(ViewDistance=20000,ViewFadeDistance=18000,TransparencySubtag="glass",BackdropZoneSubtag="backdrop")
 	
 	//network
 	bAlwaysRelevant=true

@@ -705,7 +705,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	//visibility
 	visible = isNodeVisible(node, frame, point);
 	if (!visible) {
-		point = locationToRenderPoint2D(node.Location, frame, pointVisibility);
+		point = getNodeRenderPoint2D(node, frame, pointVisibility);
 		if (pointVisibility != RP2DV_Visible) {
 			return;
 		}
@@ -1297,6 +1297,9 @@ final static function float lensflareMultiplierAlpha(float alpha, NodeLensflareM
 
 defaultproperties
 {
+	//programmables
+	bBackdropEnabled=true
+	
 	//editables (controller - corona)
 	Corona=(Texture=(Value=Texture'Corona',Render=(bSmooth=true)),Size=1.0,Glow=1.0)
 	Corona=(Scale=(Value=(U=1.0,V=1.0)))
