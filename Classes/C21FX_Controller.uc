@@ -238,7 +238,7 @@ final simulated function drawNodes(C21FX_Node rootNode, RenderFrame frame)
 {
 	//local
 	local C21FX_Node node;
-	local float frameOpacity, viewDistanceDelta;
+	local float frameOpacity, viewDistanceDelta, distance;
 	
 	//initialize
 	frameOpacity = frame.Opacity;
@@ -251,11 +251,11 @@ final simulated function drawNodes(C21FX_Node rootNode, RenderFrame frame)
 		frame.Opacity = frameOpacity;
 		
 		//distance
-		node.Distance = vsize(node.Location - getNodeViewLocation(node, frame));
-		if (node.Distance > Visibility.ViewDistance) {
+		distance = node.getRenderDistance(frame, bBackdropEnabled);
+		if (distance > Visibility.ViewDistance) {
 			continue;
-		} else if (viewDistanceDelta > 0.0 && node.Distance >= Visibility.ViewFadeDistance) {
-			frame.Opacity *= (Visibility.ViewDistance - node.Distance) / viewDistanceDelta;
+		} else if (viewDistanceDelta > 0.0 && distance >= Visibility.ViewFadeDistance) {
+			frame.Opacity *= (Visibility.ViewDistance - distance) / viewDistanceDelta;
 		}
 		
 		//render
@@ -331,14 +331,6 @@ final simulated function initializeNodes()
 	}
 }
 
-final simulated function vector getNodeViewLocation(C21FX_Node node, RenderFrame frame)
-{
-	if (bBackdropEnabled && node.Actor != none && SkyZoneInfo(node.Actor.Region.Zone) != none) {
-		return node.Actor.Region.Zone.Location;
-	}
-	return frame.View.Location;
-}
-
 final simulated function C21FX_Node generateNode(C21FX_Node rootNode, Actor actor)
 {
 	//local
@@ -354,8 +346,8 @@ final simulated function C21FX_Node generateNode(C21FX_Node rootNode, Actor acto
 	if (node == none) {
 		node = new class'C21FX_Node';
 	}
-	node.Actor = actor;
-	node.Location = actor.Location;
+	node.setActor(actor);
+	node.setLocation(actor.Location);
 	node.NextNode = rootNode;
 	
 	//return
@@ -399,18 +391,21 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 	//local
 	local ERenderPoint2DVisibility pointVisibility;
 	local bool actorHidden;
+	local Actor actor;
 	
 	//check
 	if (node == none) {
 		return false;
 	}
 	
+	//actor
+	actor = node.getActor();
+	
 	//actor sync
-	actorHidden = node.Actor == none || node.Actor.bHidden;
+	actorHidden = actor == none || actor.bHidden;
 	if (
-		(Visibility.ActorSync == VAS_Auto && actorHidden && C21FX_Point(node.Actor) == none && 
-		Keypoint(node.Actor) == none && Light(node.Actor) == none && NavigationPoint(node.Actor) == none && 
-		Triggers(node.Actor) == none) || 
+		(Visibility.ActorSync == VAS_Auto && actorHidden && C21FX_Point(actor) == none && Keypoint(actor) == none && 
+		Light(actor) == none && NavigationPoint(actor) == none && Triggers(actor) == none) || 
 		(Visibility.ActorSync == VAS_Same && actorHidden) || 
 		(Visibility.ActorSync == VAS_Invert && !actorHidden)
 	) {
@@ -419,10 +414,9 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 	
 	//zone
 	if (
-		Visibility.bZoneExclusive && node.Actor != none && 
-		node.Actor.Region.ZoneNumber != frame.View.Actor.Region.ZoneNumber && (
-			!bBackdropEnabled || SkyZoneInfo(node.Actor.Region.Zone) == none || 
-			node.Actor.Region.Zone != frame.View.Actor.Region.Zone.SkyZone
+		Visibility.bZoneExclusive && actor != none && actor.Region.ZoneNumber != frame.View.Actor.Region.ZoneNumber && (
+			!bBackdropEnabled || SkyZoneInfo(actor.Region.Zone) == none || 
+			actor.Region.Zone != frame.View.Actor.Region.Zone.SkyZone
 		)
 	) {
 		return false;
@@ -446,20 +440,12 @@ final simulated function bool isNodeVisible(C21FX_Node node, RenderFrame frame, 
 final simulated function RenderPoint2D getNodeRenderPoint2D(
 	C21FX_Node node, RenderFrame frame, out ERenderPoint2DVisibility visibility
 ) {
-	//local
-	local vector location;
-	
-	//location
-	if (bBackdropEnabled && node.Actor != none && SkyZoneInfo(node.Actor.Region.Zone) != none) {
-		location = frame.View.Location + (
-			(node.Location - node.Actor.Region.Zone.Location) << node.Actor.Region.Zone.Rotation
-		);
-	} else {
-		location = node.Location;
-	}
-	
-	//return
-	return locationToRenderPoint2D(location, frame, visibility);
+	return locationToRenderPoint2D(node.getRenderLocation(frame, bBackdropEnabled), frame, visibility);
+}
+
+final simulated function RenderScale2D getNodeRenderScale2D(C21FX_Node node, RenderFrame frame)
+{
+	return locationToRenderScale2D(node.getRenderLocation(frame, bBackdropEnabled), frame);
 }
 
 final simulated function bool isNodeOccluded(C21FX_Node node, RenderFrame frame)
@@ -522,13 +508,17 @@ final simulated function vector getNodeOcclusionLocation(C21FX_Node node, Render
 	//local
 	local vector location, hitLocation, hitNormal, hitLocationMin;
 	local NodeBackdrop backdrop;
+	local Actor actor;
 	local byte i;
 	
+	//actor
+	actor = node.getActor();
+	
 	//backdrop
-	if (bBackdropEnabled && node.Actor != none && SkyZoneInfo(node.Actor.Region.Zone) != none) {
+	if (bBackdropEnabled && actor != none && SkyZoneInfo(actor.Region.Zone) != none) {
 		//location
 		location = frame.View.Location + BACKDROP_TRACE_DISTANCE * normal(
-			(node.Location - node.Actor.Region.Zone.Location) << node.Actor.Region.Zone.Rotation
+			node.getRenderLocation(frame, true) - frame.View.Location
 		);
 		
 		//trace
@@ -537,7 +527,7 @@ final simulated function vector getNodeOcclusionLocation(C21FX_Node node, Render
 			for (i = 0; i < BackdropsCount; i++) {
 				backdrop = Backdrops[i];
 				if (
-					backdrop.Zone.SkyZone == node.Actor.Region.Zone && 
+					backdrop.Zone.SkyZone == actor.Region.Zone && 
 					hitLocationMin.X >= backdrop.Edge.X.Min && hitLocationMin.X <= backdrop.Edge.X.Max && 
 					hitLocationMin.Y >= backdrop.Edge.Y.Min && hitLocationMin.Y <= backdrop.Edge.Y.Max && 
 					hitLocationMin.Z >= backdrop.Edge.Z.Min && hitLocationMin.Z <= backdrop.Edge.Z.Max && (
@@ -559,7 +549,7 @@ final simulated function vector getNodeOcclusionLocation(C21FX_Node node, Render
 	}
 	
 	//return
-	return node.Location;
+	return node.getLocation();
 }
 
 

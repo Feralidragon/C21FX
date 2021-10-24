@@ -691,10 +691,11 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	local ERenderPoint2DVisibility pointVisibility;
 	local ECoronaScaleMode scaleMode;
 	local ECoronaColorMode colorMode;
-	local float fscale, opacity, gSize;
+	local float distance, fscale, opacity, gSize;
 	local byte saturation;
 	local color c, color;
 	local NodeLensflareCorona lCorona;
+	local Actor actor;
 	
 	//check
 	if (
@@ -728,6 +729,10 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		}
 	}
 	
+	//initialize
+	actor = node.getActor();
+	distance = node.getRenderDistance(frame, bBackdropEnabled);
+	
 	//scale mode
 	scaleMode = Corona.Scale.Mode;
 	if (scaleMode == CSM_Auto) {
@@ -746,7 +751,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		
 		//distance
 		if (scaleMode == CSM_Distance && Visibility.ViewDistance > 0.0) {
-			fscale *= 1.0 - (node.Distance / Visibility.ViewDistance);
+			fscale *= 1.0 - (distance / Visibility.ViewDistance);
 		}
 		
 		//finalize
@@ -754,7 +759,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		scale.V = fscale;
 		
 	} else if (scaleMode == CSM_World) {
-		scale = locationToRenderScale2D(node.Location, frame);
+		scale = getNodeRenderScale2D(node, frame);
 	}
 	scale.U *= Corona.Scale.Value.U * Corona.Size;
 	scale.V *= Corona.Scale.Value.V * Corona.Size;
@@ -806,7 +811,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	//color mode
 	colorMode = Corona.Color.Mode;
 	if (colorMode == CCM_Auto) {
-		if (Light(node.Actor) != none) {
+		if (Light(actor) != none) {
 			colorMode = CCM_Light;
 		} else {
 			colorMode = CCM_Value;
@@ -840,11 +845,11 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 		} else {
 			color = Corona.Color.Value;
 		}
-	} else if (node.Actor != none) {
+	} else if (actor != none) {
 		if (colorMode == CCM_Light) {
-			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, node.Actor.LightBrightness);
+			color = hsbToColor(actor.LightHue, actor.LightSaturation, actor.LightBrightness);
 		} else if (colorMode == CCM_LightHS) {
-			color = hsbToColor(node.Actor.LightHue, node.Actor.LightSaturation, 255);
+			color = hsbToColor(actor.LightHue, actor.LightSaturation, 255);
 		} else if (colorMode == CCM_LightHue) {
 			if (node.bLinked && Corona.Link.Gradient.Saturation.Mode != CLGM_None) {
 				if (Corona.Link.Gradient.Saturation.Mode == CLGM_NonLinear) {
@@ -859,7 +864,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 			} else {
 				saturation = Corona.Saturation;
 			}
-			color = hsbToColor(node.Actor.LightHue, saturation, 255);
+			color = hsbToColor(actor.LightHue, saturation, 255);
 		}
 	}
 	c.R = byte(float(color.R) * opacity);
@@ -872,7 +877,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	}
 	
 	//draw
-	setRenderFrameNearestZ(frame, node.Distance);
+	setRenderFrameNearestZ(frame, distance);
 	drawSprite(
 		frame, Corona.Texture.Value, c, point, scale, true, true, Corona.Texture.Render.Mode,
 		Corona.Texture.Render.bMirrorU, Corona.Texture.Render.bMirrorV, Corona.Texture.Render.bSmooth
@@ -882,7 +887,7 @@ final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame fra
 	if (LensflareEntriesCount > 0) {
 		lCorona.Color = color;
 		lCorona.Opacity = opacity;
-		lCorona.Distance = node.Distance;
+		lCorona.Distance = distance;
 		lCorona.Point = point;
 		lCorona.Scale = scale;
 		lCorona.Texture = Corona.Texture.Value;
@@ -1265,7 +1270,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 		for (node = link.RootNode; node != none; node = C21FX_CoronaNode(node.NextNode)) {
 			//set
 			node.Position = position;
-			node.Location = link.Point1.Location + position * vector;
+			node.setLocation(link.Point1.Location + position * vector);
 			position = fmin(position + unit, 1.0);
 			
 			//finalize
