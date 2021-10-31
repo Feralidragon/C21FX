@@ -93,6 +93,8 @@ simulated event render(RenderFrame frame);
 
 simulated event C21FX_Node createNode(Actor actor);
 
+simulated event initializeNode(C21FX_Node node);
+
 simulated event initializeNodesRender(RenderFrame frame);
 
 simulated event renderNode(C21FX_Node node, RenderFrame frame);
@@ -349,6 +351,9 @@ final simulated function C21FX_Node generateNode(C21FX_Node rootNode, Actor acto
 	node.setActor(actor);
 	node.setLocation(actor.Location);
 	node.NextNode = rootNode;
+	
+	//initialize
+	initializeNode(node);
 	
 	//return
 	return node;

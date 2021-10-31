@@ -90,6 +90,13 @@ enum ECoronaLinkGradientMode
 	CLGM_NonLinear
 };
 
+enum ECoronaSnapMode
+{
+	CSNM_Auto,
+	CSNM_Off,
+	CSNM_On
+};
+
 enum ELensflarePreset
 {
 	LP_None,
@@ -251,6 +258,26 @@ struct NodeCoronaLink
 	var() NodeCoronaLinkGradient Gradient;
 };
 
+struct NodeCoronaSnap
+{
+	var() ECoronaSnapMode Mode;
+	var() float Distance;
+	var() float Offset;
+};
+
+struct NodeCoronaSnapTraceHit
+{
+	var bool bValid;
+	var vector Location;
+	var vector Normal;
+};
+
+struct NodeCoronaSnapTrace
+{
+	var vector Direction;
+	var NodeCoronaSnapTraceHit Hit;
+};
+
 struct NodeCorona
 {
 	var() NodeCoronaTexture Texture;
@@ -260,6 +287,7 @@ struct NodeCorona
 	var() NodeCoronaColor Color;
 	var() byte Saturation;
 	var() NodeCoronaLink Link;
+	var() NodeCoronaSnap Snap;
 };
 
 struct NodeLensflareMultiplier
@@ -639,6 +667,11 @@ simulated event C21FX_Node createNode(Actor actor)
 	return new class'C21FX_CoronaNode';
 }
 
+simulated event initializeNode(C21FX_Node node)
+{
+	snapNode(C21FX_CoronaNode(node));
+}
+
 simulated event initializeNodesRender(RenderFrame frame)
 {
 	//canvas
@@ -682,6 +715,96 @@ simulated event renderLink(C21FX_Link link, RenderFrame frame)
 
 
 //Final simulated functions
+final simulated function snapNode(C21FX_CoronaNode node)
+{
+	//local
+	local NodeCoronaSnapTrace traces[6];
+	local NodeCoronaSnapTraceHit hit;
+	local vector location, hitLocation, hitNormal, traceDirection;
+	local Actor hitActor;
+	local byte i, i2, hitCount;
+	
+	//check
+	if (
+		node == none || Corona.Snap.Distance <= 0.0 || Corona.Snap.Offset <= 0.0 || 
+		Corona.Snap.Mode == CSNM_Off || (Corona.Snap.Mode == CSNM_Auto && Light(node.getActor()) == none)
+	) {
+		return;
+	}
+	
+	//initialize
+	location = node.getLocation();
+	traces[0].Direction = vect(1.0, 0.0, 0.0);
+	traces[1].Direction = vect(-1.0, 0.0, 0.0);
+	traces[2].Direction = vect(0.0, 1.0, 0.0);
+	traces[3].Direction = vect(0.0, -1.0, 0.0);
+	traces[4].Direction = vect(0.0, 0.0, 1.0);
+	traces[5].Direction = vect(0.0, 0.0, -1.0);
+	
+	//trace
+	for (i = 0; i < arrayCount(traces); i++) {
+		hitActor = trace(hitLocation, hitNormal, location + traces[i].Direction * Corona.Snap.Distance, location);
+		traces[i].Hit.bValid = hitActor != none;
+		traces[i].Hit.Location = hitLocation;
+		traces[i].Hit.Normal = hitNormal;
+	}
+	
+	//count
+	for (i = 0; i < arrayCount(traces); i += 2) {
+		if (traces[i].Hit.bValid != traces[i + 1].Hit.bValid) {
+			hitCount++;
+		}
+	}
+	
+	//hit
+	switch (hitCount) {
+		case 0:
+			return;
+		case 1:
+			for (i = 0; i < arrayCount(traces); i += 2) {
+				i2 = i + 1;
+				if (traces[i].Hit.bValid != traces[i2].Hit.bValid) {
+					if (traces[i].Hit.bValid) {
+						hit = traces[i].Hit;
+					} else {
+						hit = traces[i2].Hit;
+					}
+					break;
+				}
+			}
+			break;
+	}
+	
+	//diagonal
+	if (!hit.bValid) {
+		//direction
+		for (i = 0; i < arrayCount(traces); i += 2) {
+			i2 = i + 1;
+			if (traces[i].Hit.bValid != traces[i2].Hit.bValid) {
+				if (traces[i].Hit.bValid) {
+					traceDirection += traces[i].Direction;
+				} else {
+					traceDirection += traces[i2].Direction;
+				}
+			}
+		}
+		traceDirection = normal(traceDirection);
+		
+		//trace
+		hitActor = trace(hitLocation, hitNormal, location + traceDirection * Corona.Snap.Distance, location);
+		if (hitActor != none) {
+			hit.bValid = true;
+			hit.Location = hitLocation;
+			hit.Normal = hitNormal;
+		}
+	}
+	
+	//location
+	if (hit.bValid) {
+		node.setLocation(hit.Location + hit.Normal * Corona.Snap.Offset);
+	}
+}
+
 final simulated function renderCoronaNode(C21FX_CoronaNode node, RenderFrame frame)
 {
 	//local
@@ -1272,6 +1395,7 @@ final simulated function renderCoronaLink(C21FX_CoronaLink link, RenderFrame fra
 			node.Position = position;
 			node.setLocation(link.Point1.Location + position * vector);
 			position = fmin(position + unit, 1.0);
+			snapNode(node);
 			
 			//finalize
 			if (node.bEnd) {
@@ -1316,6 +1440,7 @@ defaultproperties
 	Corona=(Link=(Gradient=(Glow=(Value1=1.0,Value2=1.0))))
 	Corona=(Link=(Gradient=(Scale=(Value1=(U=1.0,V=1.0),Value2=(U=1.0,V=1.0)))))
 	Corona=(Link=(Gradient=(Color=(Value1=(R=255,G=255,B=255),Value2=(R=255,G=255,B=255)))))
+	Corona=(Snap=(Distance=32.0,Offset=0.5))
 	
 	//editables (presets - anamorphic lensflares)
 	LensflarePresetAnamorphic(0)=(Glow=(Value=0.25))
